@@ -1,0 +1,87 @@
+Build a web-based analytics tool for electrical power measurement files (TXT/CSV exports from power quality analyzers, loggers, or energy meters).
+
+Goal: turn raw measurement data into a clean, interactive diagnostic experience that helps users quickly understand system behavior, power quality issues, load patterns, and battery/peak-shaving opportunities.
+
+Core input data usually contains time-series values such as:
+
+* Timestamp
+* Voltage L1 / L2 / L3
+* Current L1 / L2 / L3
+* Total active power (kW)
+* Frequency (Hz)
+* Power factor
+* THD voltage / THD current
+* Neutral current
+* Optional min / avg / max values per interval
+
+The tool should assume datasets may range from minutes to multiple weeks, so performance matters.
+
+Core product requirements:
+
+1. File Import
+   Support TXT/CSV uploads with flexible parsing:
+
+* different delimiters
+* decimal comma / decimal point
+* varying timestamp formats
+* inconsistent column names
+
+2. Interactive Main Chart
+   The central UI should be a large time-series chart with:
+
+* smooth zoom in / zoom out
+* pan navigation
+* selectable time ranges
+* toggle visible metrics
+* precise hover values
+* strong performance with large datasets
+
+3. Automatic Analysis
+   The tool should detect and surface useful findings such as:
+
+* load peaks / recurring spikes
+* stable vs unstable voltage
+* unusual current jumps
+* poor power factor
+* high THD values
+* phase imbalance
+* abnormal neutral current
+* cyclic machine behavior
+* possible peak shaving potential
+* battery sizing indicators based on peaks and duration
+
+4. Threshold / Health Logic
+   Use reasonable engineering defaults, but make them configurable.
+   Highlight values as healthy / warning / critical.
+
+5. Insights Layer
+   Do not just show charts. Generate concise conclusions such as:
+
+* Maximum demand reached X kW
+* Voltage remained stable
+* Repeating load spikes every X minutes
+* THD elevated on Phase L2
+* Strong candidate for peak shaving
+* Load profile suggests compressor / motor cycling
+
+6. Output
+   Allow export of:
+
+* PDF report
+* chart images
+* structured findings (CSV / JSON)
+
+7. Developer Freedom
+   Use your judgment on architecture, UI, libraries, and UX. Prioritize speed, clarity, and professional visual quality. The result should feel like a premium industrial analytics product, not a spreadsheet viewer.
+
+Important mindset:
+
+Users do not care about raw columns. They care about:
+
+* Is the system healthy?
+* What is costing money?
+* What looks risky?
+* Can a battery help?
+* Where should I investigate first?
+
+Build for answers, not just graphs.

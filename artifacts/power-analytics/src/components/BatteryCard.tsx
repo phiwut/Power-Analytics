@@ -1,0 +1,96 @@
+import { Battery, Zap, TrendingDown } from "lucide-react";
+import type { AnalysisResult } from "@/lib/analysis";
+
+export function BatteryCard({ result }: { result: AnalysisResult }) {
+  const { battery, kpi } = result;
+  const reductionPct = battery.peakReductionPct;
+  const tone =
+    reductionPct > 25
+      ? "bg-emerald-500/10 border-emerald-500/30"
+      : reductionPct > 10
+        ? "bg-amber-500/10 border-amber-500/30"
+        : "bg-card border-card-border";
+
+  return (
+    <div className={`shadcn-card rounded-xl border p-6 ${tone}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <Battery className="size-5" />
+          </span>
+          <div>
+            <h3 className="font-semibold tracking-tight">Battery & Peak Shaving</h3>
+            <p className="text-xs text-muted-foreground">
+              Sized to flatten the top 5% of demand peaks
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-5">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+            Recommended power
+          </div>
+          <div className="text-2xl font-mono font-semibold tabular-nums">
+            {battery.recommendedKw.toFixed(0)}
+            <span className="text-sm text-muted-foreground ml-1">kW</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+            Recommended energy
+          </div>
+          <div className="text-2xl font-mono font-semibold tabular-nums">
+            {battery.recommendedKwh.toFixed(0)}
+            <span className="text-sm text-muted-foreground ml-1">kWh</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <Stat
+          icon={<TrendingDown className="size-4" />}
+          label="Peak reduction"
+          value={`${battery.peakReductionKw.toFixed(1)} kW`}
+          sub={`${reductionPct.toFixed(0)}% of ${kpi.peakPowerKw.toFixed(1)} kW peak`}
+        />
+        <Stat
+          icon={<Zap className="size-4" />}
+          label="Daily cycle energy"
+          value={`${battery.cycleEnergyPerDayKwh.toFixed(1)} kWh/day`}
+          sub={`~${battery.estimatedSavingsKwh.toFixed(0)} kWh / month shifted`}
+        />
+      </div>
+
+      <p className="mt-5 text-xs text-muted-foreground leading-relaxed border-t pt-4">
+        Estimate based on the 95th percentile of measured load. Actual sizing depends on tariff structure, demand charges, and required autonomy.
+      </p>
+    </div>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex size-7 items-center justify-center rounded-md bg-card text-muted-foreground shrink-0">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="font-mono font-semibold text-sm tabular-nums">{value}</div>
+        <div className="text-[11px] text-muted-foreground">{sub}</div>
+      </div>
+    </div>
+  );
+}

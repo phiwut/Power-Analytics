@@ -1,0 +1,31 @@
+kind = "data-app"
+previewPath = "/"
+title = "Power Analytics"
+version = "1.0.0"
+id = "artifacts/power-analytics"
+router = "path"
+
+[[integratedSkills]]
+name = "data-visualization"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25974
+
+[services.development]
+run = "pnpm --filter @workspace/power-analytics run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/power-analytics", "run", "build" ]
+publicDir = "artifacts/power-analytics/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25974"
+BASE_PATH = "/"

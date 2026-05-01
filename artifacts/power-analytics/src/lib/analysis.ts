@@ -756,6 +756,8 @@ export function analyse(
   // duration so partial-hour windows and midnight crossings are represented.
   const HOUR_MS = 3_600_000;
   const durationToleranceMs = 1_000;
+  const expectedIntervalMs = Math.max(1_000, ds.intervalSeconds * 1000);
+  const maxRepresentedSegmentMs = expectedIntervalMs * 1.5;
   type HourlyAggregate = {
     weightedImportSum: number;
     durationMs: number;
@@ -764,14 +766,18 @@ export function analyse(
     slotDurations: Map<number, number>;
   };
   const hourlyMap = new Map<number, HourlyAggregate>();
+  let droppedGapMs = 0;
   const lastFallbackEnd = rows.length
     ? rows[rows.length - 1]!.timestamp + ds.intervalSeconds * 1000
     : 0;
 
   for (let i = 0; i < rows.length; i++) {
     const segStart = rows[i]!.timestamp;
-    const segEnd = i + 1 < rows.length ? rows[i + 1]!.timestamp : lastFallbackEnd;
+    const rawSegEnd = i + 1 < rows.length ? rows[i + 1]!.timestamp : lastFallbackEnd;
+    if (!(rawSegEnd > segStart)) continue;
+    const segEnd = Math.min(rawSegEnd, segStart + maxRepresentedSegmentMs);
     if (!(segEnd > segStart)) continue;
+    droppedGapMs += Math.max(0, rawSegEnd - segEnd);
 
     const importKw = importPowers[i]!;
     let cursor = segStart;
@@ -829,6 +835,17 @@ export function analyse(
         partialCount: 0,
       });
     }
+  }
+
+  if (droppedGapMs > 0) {
+    const droppedHours = droppedGapMs / HOUR_MS;
+    insights.push({
+      id: "hourly-profile-data-gaps",
+      severity: "info",
+      category: "summary",
+      title: "Hourly profile guarded against long data gaps",
+      detail: `Detected ${(droppedHours).toFixed(2)} h of oversized timestamp gaps. Hourly averages use capped sample hold-time (${(maxRepresentedSegmentMs / 1000).toFixed(0)} s max) to avoid overstating load during missing data.`,
+    });
   }
 
   return { kpi, insights, battery, buckets, hourlyProfile, spikes };

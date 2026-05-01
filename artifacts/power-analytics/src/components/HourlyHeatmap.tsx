@@ -9,22 +9,27 @@ export function HourlyHeatmap({ hourly }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-end gap-1 h-32">
+      <div className="flex items-end gap-1 h-40">
         {hourly.map((h) => {
           const hAvg = max > 0 ? (h.avgPowerKw / max) * 100 : 0;
           const hMax = max > 0 ? (h.maxPowerKw / max) * 100 : 0;
+          const hasData = h.count > 0 && h.durationHours > 0;
           return (
             <div
               key={h.hour}
-              className={`flex-1 flex flex-col-reverse gap-0.5 group relative ${h.isPartial ? "ring-1 ring-amber-500/70 rounded-sm" : ""}`}
-              title={`${h.hour}:00 — avg ${h.avgPowerKw.toFixed(1)} kW, peak ${h.maxPowerKw.toFixed(1)} kW, coverage ${h.durationHours.toFixed(2)} h${h.isPartial ? " (partial hour coverage)" : ""}`}
+              className={`flex-1 h-full group relative rounded-sm ${h.isPartial ? "ring-1 ring-amber-500/70" : ""}`}
+              title={
+                hasData
+                  ? `${h.hour}:00 — avg ${h.avgPowerKw.toFixed(1)} kW, peak ${h.maxPowerKw.toFixed(1)} kW, coverage ${h.durationHours.toFixed(2)} h${h.isPartial ? " (partial hour coverage)" : ""}`
+                  : `${h.hour}:00 — no data`
+              }
             >
               <div
-                className="w-full rounded-t bg-primary/30 group-hover:bg-primary/50 transition-colors"
+                className="absolute inset-x-0 bottom-0 rounded-t bg-primary/30 group-hover:bg-primary/50 transition-colors"
                 style={{ height: `${hMax}%` }}
               />
               <div
-                className="w-full rounded-t bg-primary group-hover:bg-primary/90 transition-colors -mt-0.5 absolute bottom-0"
+                className="absolute inset-x-0 bottom-0 rounded-t bg-primary group-hover:bg-primary/90 transition-colors"
                 style={{ height: `${hAvg}%` }}
               />
             </div>

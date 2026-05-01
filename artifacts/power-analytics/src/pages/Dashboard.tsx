@@ -33,12 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Sliders } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
@@ -95,11 +89,6 @@ export default function Dashboard() {
       "All days"
     );
   }, [result, selectedProfileDay]);
-
-  const profilePeakImport = useMemo(() => {
-    if (!profileHourly.length) return 0;
-    return Math.max(...profileHourly.map((h) => h.peakImportKw), 0);
-  }, [profileHourly]);
 
   const onFile = useCallback(async (file: File) => {
     setBusy(true);
@@ -188,13 +177,12 @@ export default function Dashboard() {
       {!ds && <EmptyState onFile={onFile} busy={busy} onLoadSample={loadSample} />}
 
       {ds && result && range && (
-        <TooltipProvider delayDuration={120}>
-        <main className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6">
+        <main className="max-w-[1600px] mx-auto px-6 py-6 space-y-6">
           <KpiRow result={result} />
 
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-5 sm:gap-6">
-            <div className="space-y-5 sm:space-y-6 min-w-0">
-              <section className="shadcn-card rounded-xl border bg-card p-4 sm:p-5 space-y-4">
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+            <div className="space-y-6 min-w-0">
+              <section className="shadcn-card rounded-xl border bg-card p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <h2 className="font-semibold tracking-tight">
@@ -205,20 +193,13 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <Sheet>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <SheetTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Sliders className="size-4 mr-1.5" />
-                            Thresholds
-                          </Button>
-                        </SheetTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Tune analysis sensitivity and warning limits.
-                      </TooltipContent>
-                    </Tooltip>
-                    <SheetContent className="w-[92vw] max-w-[420px] overflow-y-auto">
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Sliders className="size-4 mr-1.5" />
+                        Thresholds
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-[380px] sm:w-[420px] overflow-y-auto">
                       <ThresholdsPanel thresholds={thresholds} onChange={setThresholds} />
                     </SheetContent>
                   </Sheet>
@@ -233,77 +214,43 @@ export default function Dashboard() {
               </section>
 
               <Tabs defaultValue="phases" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 max-w-xl h-auto">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <TabsTrigger value="phases">Phases</TabsTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>Voltage and current phase behavior.</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <TabsTrigger value="profile">Profile</TabsTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>Hourly import/export load pattern.</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <TabsTrigger value="spikes">Spikes</TabsTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>Transient demand events and their impact.</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <TabsTrigger value="battery">Battery</TabsTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>Peak-shaving recommendation and savings.</TooltipContent>
-                  </Tooltip>
+                <TabsList className="grid w-full grid-cols-4 max-w-xl">
+                  <TabsTrigger value="phases">Phases</TabsTrigger>
+                  <TabsTrigger value="profile">Profile</TabsTrigger>
+                  <TabsTrigger value="spikes">Spikes</TabsTrigger>
+                  <TabsTrigger value="battery">Battery</TabsTrigger>
                 </TabsList>
                 <TabsContent value="phases" className="mt-4">
                   <PhaseGauges ds={ds} result={result} />
                 </TabsContent>
                 <TabsContent value="profile" className="mt-4">
-                  <div className="shadcn-card rounded-xl border bg-card p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 mb-4">
+                  <div className="shadcn-card rounded-xl border bg-card p-6">
+                    <div className="flex items-baseline justify-between mb-4">
                       <div>
                         <h3 className="font-semibold tracking-tight">Hourly load profile</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Average net load and import/export peaks per hour-of-day
                         </p>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                      <div className="flex items-center gap-2">
                         {result.hourlyProfilesByDay.length > 1 && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div>
-                                <Select value={selectedProfileDay} onValueChange={setSelectedProfileDay}>
-                                  <SelectTrigger className="h-8 w-[170px] text-xs">
-                                    <SelectValue placeholder="Select day" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">All days</SelectItem>
-                                    {result.hourlyProfilesByDay.map((day) => (
-                                      <SelectItem key={day.dayStart} value={String(day.dayStart)}>
-                                        {day.dayLabel}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>Switch between individual measurement days.</TooltipContent>
-                          </Tooltip>
+                          <Select value={selectedProfileDay} onValueChange={setSelectedProfileDay}>
+                            <SelectTrigger className="h-8 w-[170px] text-xs">
+                              <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All days</SelectItem>
+                              {result.hourlyProfilesByDay.map((day) => (
+                                <SelectItem key={day.dayStart} value={String(day.dayStart)}>
+                                  {day.dayLabel}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         )}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-xs text-muted-foreground font-mono cursor-help">
-                              {selectedProfileLabel} · peak {profilePeakImport.toFixed(1)} kW
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Peak import for the currently selected profile scope.
-                          </TooltipContent>
-                        </Tooltip>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {selectedProfileLabel} · peak {result.kpi.peakPowerKw.toFixed(1)} kW
+                        </span>
                       </div>
                     </div>
                     <HourlyHeatmap hourly={profileHourly} />
@@ -318,7 +265,7 @@ export default function Dashboard() {
               </Tabs>
             </div>
 
-            <aside className="space-y-5 sm:space-y-6 min-w-0">
+            <aside className="space-y-6 min-w-0">
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-semibold tracking-tight">Findings</h2>
@@ -349,7 +296,6 @@ export default function Dashboard() {
             </div>
           )}
         </main>
-        </TooltipProvider>
       )}
 
       <Toaster />

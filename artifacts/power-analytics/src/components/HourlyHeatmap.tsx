@@ -1,10 +1,4 @@
 import type { HourlyProfile } from "@/lib/analysis";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface Props {
   hourly: HourlyProfile[];
@@ -55,16 +49,9 @@ export function HourlyHeatmap({ hourly }: Props) {
   const yAbs = Math.max(0.5, yImportMax, yExportMax);
 
   return (
-    <TooltipProvider delayDuration={120}>
-      <div className="space-y-2">
-      <div className="relative flex items-end gap-0.5 sm:gap-1 h-44 sm:h-48">
+    <div className="space-y-2">
+      <div className="relative flex items-end gap-1 h-48">
         <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
-        <div className="absolute left-0 -top-1 text-[10px] text-muted-foreground font-mono">
-          +{yAbs.toFixed(1)}
-        </div>
-        <div className="absolute left-0 -bottom-1 text-[10px] text-muted-foreground font-mono">
-          -{yAbs.toFixed(1)}
-        </div>
         {hourly.map((h) => {
           const hImportPeak = Math.min(50, yAbs > 0 ? (h.peakImportKw / yAbs) * 50 : 0);
           const hExportPeak = Math.min(50, yAbs > 0 ? (h.peakExportKw / yAbs) * 50 : 0);
@@ -74,52 +61,37 @@ export function HourlyHeatmap({ hourly }: Props) {
           const clippedImport = h.peakImportKw > yAbs + 1e-9;
           const clippedExport = h.peakExportKw > yAbs + 1e-9;
           return (
-            <Tooltip key={h.hour}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className={`flex-1 h-full group relative rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-ring ${h.isPartial ? "ring-1 ring-amber-500/70" : ""}`}
-                  aria-label={`Hourly profile ${String(h.hour).padStart(2, "0")}:00`}
-                >
-                  <div
-                    className="absolute inset-x-0 bottom-1/2 rounded-t bg-primary/30 group-hover:bg-primary/50 transition-colors"
-                    style={{ height: `${hImportPeak}%` }}
-                  />
-                  <div
-                    className="absolute inset-x-0 top-1/2 rounded-b bg-cyan-500/30 group-hover:bg-cyan-500/50 transition-colors"
-                    style={{ height: `${hExportPeak}%` }}
-                  />
-                  <div
-                    className="absolute inset-x-0 bottom-1/2 rounded-t bg-primary group-hover:bg-primary/90 transition-colors"
-                    style={{ height: `${hAvgImport}%` }}
-                  />
-                  <div
-                    className="absolute inset-x-0 top-1/2 rounded-b bg-cyan-500 group-hover:bg-cyan-400 transition-colors"
-                    style={{ height: `${hAvgExport}%` }}
-                  />
-                  {clippedImport && <div className="absolute inset-x-0 top-0 h-0.5 bg-destructive/80" />}
-                  {clippedExport && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-destructive/80" />}
-                  {h.isPartial && (
-                    <div className="absolute top-1 right-1 size-1.5 rounded-full bg-amber-500/80" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                {hasData ? (
-                  <div className="space-y-0.5">
-                    <div className="font-semibold">{String(h.hour).padStart(2, "0")}:00</div>
-                    <div>Avg net: {h.avgNetKw.toFixed(1)} kW</div>
-                    <div>Peak import: {h.peakImportKw.toFixed(1)} kW</div>
-                    <div>Peak export: {h.peakExportKw.toFixed(1)} kW</div>
-                    <div>Coverage: {h.durationHours.toFixed(2)} h</div>
-                    {h.isPartial && <div>Partial hour coverage</div>}
-                    {(clippedImport || clippedExport) && <div>Clipped by adaptive y-scale</div>}
-                  </div>
-                ) : (
-                  <div>{String(h.hour).padStart(2, "0")}:00 - no data</div>
-                )}
-              </TooltipContent>
-            </Tooltip>
+            <div
+              key={h.hour}
+              className={`flex-1 h-full group relative rounded-sm ${h.isPartial ? "ring-1 ring-amber-500/70" : ""}`}
+              title={
+                hasData
+                  ? `${h.hour}:00 — avg net ${h.avgNetKw.toFixed(1)} kW, peak import ${h.peakImportKw.toFixed(1)} kW, peak export ${h.peakExportKw.toFixed(1)} kW, coverage ${h.durationHours.toFixed(2)} h${h.isPartial ? " (partial hour coverage)" : ""}${clippedImport || clippedExport ? " (clipped by adaptive y-scale)" : ""}`
+                  : `${h.hour}:00 — no data`
+              }
+            >
+              <div
+                className="absolute inset-x-0 bottom-1/2 rounded-t bg-primary/30 group-hover:bg-primary/50 transition-colors"
+                style={{ height: `${hImportPeak}%` }}
+              />
+              <div
+                className="absolute inset-x-0 top-1/2 rounded-b bg-cyan-500/30 group-hover:bg-cyan-500/50 transition-colors"
+                style={{ height: `${hExportPeak}%` }}
+              />
+              <div
+                className="absolute inset-x-0 bottom-1/2 rounded-t bg-primary group-hover:bg-primary/90 transition-colors"
+                style={{ height: `${hAvgImport}%` }}
+              />
+              <div
+                className="absolute inset-x-0 top-1/2 rounded-b bg-cyan-500 group-hover:bg-cyan-400 transition-colors"
+                style={{ height: `${hAvgExport}%` }}
+              />
+              {clippedImport && <div className="absolute inset-x-0 top-0 h-0.5 bg-destructive/80" />}
+              {clippedExport && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-destructive/80" />}
+              {h.isPartial && (
+                <div className="absolute top-1 right-1 size-1.5 rounded-full bg-amber-500/80" />
+              )}
+            </div>
           );
         })}
       </div>
@@ -128,44 +100,31 @@ export function HourlyHeatmap({ hourly }: Props) {
           <span key={h}>{String(h).padStart(2, "0")}:00</span>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-primary" />
           Avg net import (+)
         </div>
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
+        <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-primary/30" />
           Peak import (+)
         </div>
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
+        <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-cyan-500" />
           Avg net export (-)
         </div>
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
+        <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-cyan-500/30" />
           Peak export (-)
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 whitespace-nowrap cursor-help">
-              <span className="size-3 rounded-sm border border-amber-500/80" />
-              Partial coverage
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>At least one day/hour bucket has less than full 60-minute coverage.</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="ml-0 sm:ml-auto font-mono text-[10px] whitespace-nowrap cursor-help">
-              y-scale ±{yAbs.toFixed(1)} kW ({hasOutlier ? "adaptive" : "full range"})
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            Adaptive scale prevents one extreme hour from flattening the full profile.
-          </TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-1.5">
+          <span className="size-3 rounded-sm border border-amber-500/80" />
+          Partial coverage
+        </div>
+        <div className="ml-auto font-mono text-[10px]">
+          y-scale ±{yAbs.toFixed(1)} kW ({hasOutlier ? "adaptive" : "full range"})
+        </div>
       </div>
     </div>
-    </TooltipProvider>
   );
 }

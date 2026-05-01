@@ -21,7 +21,7 @@ export function BatteryCard({ result }: { result: AnalysisResult }) {
           <div>
             <h3 className="font-semibold tracking-tight">Battery & Peak Shaving</h3>
             <p className="text-xs text-muted-foreground">
-              Sized to flatten the top 5% of demand peaks
+              Sized from billing-relevant 15-minute demand
             </p>
           </div>
         </div>
@@ -53,7 +53,13 @@ export function BatteryCard({ result }: { result: AnalysisResult }) {
           icon={<TrendingDown className="size-4" />}
           label="Peak reduction"
           value={`${battery.peakReductionKw.toFixed(1)} kW`}
-          sub={`${reductionPct.toFixed(0)}% of ${kpi.peakPowerKw.toFixed(1)} kW peak`}
+          sub={`${reductionPct.toFixed(0)}% of ${battery.billingPeak15MinKw.toFixed(1)} kW 15-minute peak`}
+        />
+        <Stat
+          icon={<TrendingDown className="size-4" />}
+          label="Instant peak reduction"
+          value={`${battery.rawPeakReductionKw.toFixed(1)} kW`}
+          sub={`${battery.rawPeakReductionPct.toFixed(0)}% of ${kpi.peakPowerKw.toFixed(1)} kW raw peak`}
         />
         <Stat
           icon={<Zap className="size-4" />}
@@ -64,7 +70,7 @@ export function BatteryCard({ result }: { result: AnalysisResult }) {
       </div>
 
       <p className="mt-5 text-xs text-muted-foreground leading-relaxed border-t pt-4">
-        Estimate based on the 95th percentile of measured load. Actual sizing depends on tariff structure, demand charges, and required autonomy.
+        Recommendation is based on 15-minute demand reduction, not only instant peaks. Actual sizing depends on tariff structure, demand charges, and required autonomy.
       </p>
     </div>
   );

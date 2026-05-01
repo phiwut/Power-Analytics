@@ -48,22 +48,26 @@ export function exportFindingsCsv(result: AnalysisResult, ds: ParsedDataset) {
     ["KPI", "Value", "Unit"],
     ["Average Power", result.kpi.avgPowerKw.toFixed(2), "kW"],
     ["Peak Power", result.kpi.peakPowerKw.toFixed(2), "kW"],
-    ["Base Load", result.kpi.baseLoadKw.toFixed(2), "kW"],
-    ["Energy", result.kpi.energyKwh.toFixed(2), "kWh"],
+    ["Import Base Load", result.kpi.baseLoadKw.toFixed(2), "kW"],
+    ["Import Energy", result.kpi.energyKwh.toFixed(2), "kWh"],
+    ["Export Energy", result.kpi.exportEnergyKwh.toFixed(2), "kWh"],
+    ["Export Peak", result.kpi.exportPeakKw.toFixed(2), "kW"],
     ["Duration", result.kpi.durationHours.toFixed(2), "h"],
     ["Voltage Min", result.kpi.voltageMin.toFixed(2), "V"],
     ["Voltage Max", result.kpi.voltageMax.toFixed(2), "V"],
     ["Voltage Stability CV", result.kpi.voltageStability.toFixed(3), "%"],
     ["Imbalance Avg", result.kpi.imbalanceAvgPct.toFixed(2), "%"],
     ["Imbalance Max", result.kpi.imbalanceMaxPct.toFixed(2), "%"],
-    ["Power Factor Avg", result.kpi.pfAvg.toFixed(3), ""],
-    ["Power Factor Min", result.kpi.pfMin.toFixed(3), ""],
-    ["THD V Max", result.kpi.thdVMaxPct.toFixed(2), "%"],
-    ["THD A Max", result.kpi.thdAMaxPct.toFixed(2), "%"],
-    ["Spike Count", String(result.kpi.spikeCount), ""],
+    ["Import Power Factor Avg", result.kpi.pfImportSampleCount ? result.kpi.pfAvg.toFixed(3) : "n/a", ""],
+    ["Import Power Factor Min", result.kpi.pfImportSampleCount ? result.kpi.pfMin.toFixed(3) : "n/a", ""],
+    ["THD V Max", result.kpi.thdVAvailable ? result.kpi.thdVMaxPct.toFixed(2) : "n/a", "%"],
+    ["THD I High-Load Max", result.kpi.thdAHighLoadMaxPct.toFixed(2), "%"],
+    ["THD I Raw Max", result.kpi.thdAMaxPct.toFixed(2), "%"],
+    ["Spike Event Count", String(result.kpi.spikeCount), ""],
     ["Battery kW", result.battery.recommendedKw.toFixed(1), "kW"],
     ["Battery kWh", result.battery.recommendedKwh.toFixed(1), "kWh"],
-    ["Peak Reduction", result.battery.peakReductionPct.toFixed(1), "%"],
+    ["15-Min Demand Reduction", result.battery.billingPeakReductionPct.toFixed(1), "%"],
+    ["Raw Peak Reduction", result.battery.rawPeakReductionPct.toFixed(1), "%"],
   ];
   downloadCsv(`${stripExt(ds.fileName)}-findings.csv`, rows);
 }
@@ -125,12 +129,14 @@ export function exportPdfReport(result: AnalysisResult, ds: ParsedDataset) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   const summaryLines = [
-    `Maximum demand reached ${result.kpi.peakPowerKw.toFixed(1)} kW (avg ${result.kpi.avgPowerKw.toFixed(1)} kW, base ${result.kpi.baseLoadKw.toFixed(1)} kW).`,
-    `Total energy consumption: ${result.kpi.energyKwh.toFixed(1)} kWh over ${result.kpi.durationHours.toFixed(1)} h.`,
+    `Maximum demand reached ${result.kpi.peakPowerKw.toFixed(1)} kW (avg import ${result.kpi.avgPowerKw.toFixed(1)} kW, base import ${result.kpi.baseLoadKw.toFixed(1)} kW).`,
+    `Total import energy: ${result.kpi.energyKwh.toFixed(1)} kWh over ${result.kpi.durationHours.toFixed(1)} h${result.kpi.exportEnergyKwh > 0 ? `; export energy: ${result.kpi.exportEnergyKwh.toFixed(1)} kWh` : ""}.`,
     `Voltage stability: ${result.kpi.voltageStability.toFixed(2)}% CV across phases.`,
     `Phase imbalance: avg ${result.kpi.imbalanceAvgPct.toFixed(2)}%, peak ${result.kpi.imbalanceMaxPct.toFixed(2)}%.`,
-    `Power factor: avg ${result.kpi.pfAvg.toFixed(2)}, min ${result.kpi.pfMin.toFixed(2)}.`,
-    `Detected ${result.kpi.spikeCount} load spike${result.kpi.spikeCount === 1 ? "" : "s"} in the dataset.`,
+    result.kpi.pfImportSampleCount
+      ? `Import power factor: avg ${result.kpi.pfAvg.toFixed(2)}, min ${result.kpi.pfMin.toFixed(2)}.`
+      : "Import power factor was not assessed because no material import samples were available.",
+    `Detected ${result.kpi.spikeCount} load spike event${result.kpi.spikeCount === 1 ? "" : "s"} in the dataset.`,
   ];
   for (const line of summaryLines) {
     const wrapped = doc.splitTextToSize(line, pageWidth - margin * 2);
@@ -147,18 +153,26 @@ export function exportPdfReport(result: AnalysisResult, ds: ParsedDataset) {
     body: [
       ["Peak Power", result.kpi.peakPowerKw.toFixed(2), "kW"],
       ["Average Power", result.kpi.avgPowerKw.toFixed(2), "kW"],
-      ["Base Load", result.kpi.baseLoadKw.toFixed(2), "kW"],
-      ["Energy", result.kpi.energyKwh.toFixed(2), "kWh"],
+      ["Import Base Load", result.kpi.baseLoadKw.toFixed(2), "kW"],
+      ["Import Energy", result.kpi.energyKwh.toFixed(2), "kWh"],
+      ["Export Energy", result.kpi.exportEnergyKwh.toFixed(2), "kWh"],
       ["Voltage Min / Max", `${result.kpi.voltageMin.toFixed(1)} / ${result.kpi.voltageMax.toFixed(1)}`, "V"],
       ["Voltage Stability (CV)", result.kpi.voltageStability.toFixed(3), "%"],
       ["Phase Imbalance Max", result.kpi.imbalanceMaxPct.toFixed(2), "%"],
-      ["Power Factor (avg / min)", `${result.kpi.pfAvg.toFixed(2)} / ${result.kpi.pfMin.toFixed(2)}`, ""],
-      ["THD Voltage Max", result.kpi.thdVMaxPct.toFixed(2), "%"],
-      ["THD Current Max", result.kpi.thdAMaxPct.toFixed(2), "%"],
+      [
+        "Import Power Factor (avg / min)",
+        result.kpi.pfImportSampleCount
+          ? `${result.kpi.pfAvg.toFixed(2)} / ${result.kpi.pfMin.toFixed(2)}`
+          : "n/a",
+        "",
+      ],
+      ["THD Voltage Max", result.kpi.thdVAvailable ? result.kpi.thdVMaxPct.toFixed(2) : "n/a", "%"],
+      ["THD Current High-Load Max", result.kpi.thdAHighLoadMaxPct.toFixed(2), "%"],
       ["Frequency (avg)", result.kpi.frequencyAvg.toFixed(3), "Hz"],
       ["Neutral Current Max", result.kpi.neutralCurrentMax.toFixed(1), "A"],
       ["Battery Recommendation", `${result.battery.recommendedKw.toFixed(0)} kW / ${result.battery.recommendedKwh.toFixed(0)} kWh`, ""],
-      ["Peak Reduction Potential", result.battery.peakReductionPct.toFixed(1), "%"],
+      ["15-Min Demand Reduction Potential", result.battery.billingPeakReductionPct.toFixed(1), "%"],
+      ["Raw Peak Reduction Potential", result.battery.rawPeakReductionPct.toFixed(1), "%"],
     ],
     styles: { fontSize: 9, cellPadding: 5 },
     headStyles: { fillColor: [15, 23, 42] },

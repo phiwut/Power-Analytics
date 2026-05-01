@@ -314,11 +314,18 @@ function KpiRow({ result }: { result: AnalysisResult }) {
       : kpi.voltageStability < 1
         ? "ok"
         : "default";
-  const pfTone = kpi.pfMin < 0.8 ? "critical" : kpi.pfAvg < 0.9 ? "warning" : "ok";
+  const pfTone =
+    kpi.pfImportSampleCount === 0
+      ? "default"
+      : kpi.pfMin < 0.8
+        ? "critical"
+        : kpi.pfAvg < 0.9
+          ? "warning"
+          : "ok";
   const imbTone =
     kpi.imbalanceMaxPct >= 5 ? "critical" : kpi.imbalanceMaxPct >= 2 ? "warning" : "ok";
   const thdTone =
-    kpi.thdAMaxPct >= 25 ? "critical" : kpi.thdAMaxPct >= 15 ? "warning" : "ok";
+    kpi.thdAHighLoadMaxPct >= 25 ? "critical" : kpi.thdAHighLoadMaxPct >= 15 ? "warning" : "ok";
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
@@ -334,7 +341,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         label="Avg load"
         value={kpi.avgPowerKw.toFixed(1)}
         unit="kW"
-        hint={`base ${kpi.baseLoadKw.toFixed(1)} kW`}
+        hint={`import base ${kpi.baseLoadKw.toFixed(1)} kW`}
         icon={Gauge}
       />
       <KpiCard
@@ -354,16 +361,20 @@ function KpiRow({ result }: { result: AnalysisResult }) {
       />
       <KpiCard
         label="Power factor"
-        value={kpi.pfAvg.toFixed(2)}
-        hint={`min ${kpi.pfMin.toFixed(2)}`}
+        value={kpi.pfImportSampleCount ? kpi.pfAvg.toFixed(2) : "n/a"}
+        hint={
+          kpi.pfImportSampleCount
+            ? `import min ${kpi.pfMin.toFixed(2)}`
+            : `${kpi.pfIgnoredSampleCount.toLocaleString()} ignored`
+        }
         icon={Bolt}
         tone={pfTone}
       />
       <KpiCard
-        label="THD I max"
-        value={kpi.thdAMaxPct.toFixed(1)}
+        label="THD I load"
+        value={kpi.thdAHighLoadMaxPct.toFixed(1)}
         unit="%"
-        hint={`THD V ${kpi.thdVMaxPct.toFixed(1)}%`}
+        hint={kpi.thdVAvailable ? `THD V ${kpi.thdVMaxPct.toFixed(1)}%` : "THD V n/a"}
         icon={Radio}
         tone={thdTone}
       />
@@ -398,7 +409,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         label="Battery rec"
         value={`${result.battery.recommendedKw.toFixed(0)}/${result.battery.recommendedKwh.toFixed(0)}`}
         unit="kW/kWh"
-        hint={`${result.battery.peakReductionPct.toFixed(0)}% peak ↓`}
+        hint={`${result.battery.billingPeakReductionPct.toFixed(0)}% 15m ↓`}
         icon={Battery}
       />
       <KpiCard

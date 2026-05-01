@@ -52,6 +52,7 @@ export function ThresholdsPanel({ thresholds, onChange }: Props) {
       <Section title="Power Factor">
         {num("pfWarn", "Warning below", 0.05)}
         {num("pfCritical", "Critical below", 0.05)}
+        {num("pfMinImportKw", "Assess above import", 0.5, "kW")}
       </Section>
 
       <Section title="THD Voltage">
@@ -62,6 +63,8 @@ export function ThresholdsPanel({ thresholds, onChange }: Props) {
       <Section title="THD Current">
         {num("thdAWarn", "Warning ≥", 1, "%")}
         {num("thdACritical", "Critical ≥", 1, "%")}
+        {num("thdAMinCurrentA", "Min phase current", 1, "A")}
+        {num("thdAMinCurrentPeakPct", "Min % of phase peak", 1, "%")}
       </Section>
 
       <Section title="Phase Imbalance">

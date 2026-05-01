@@ -1,4 +1,4 @@
-import { Activity, Moon, Sun, Download, FileJson, FileSpreadsheet, FileText, Github } from "lucide-react";
+import { Activity, Moon, Sun, Download, FileJson, FileSpreadsheet, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -89,14 +89,6 @@ export function AppHeader({
           <Button size="sm" variant="ghost" onClick={onToggleDark}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
-          <a
-            href="https://replit.com"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden sm:flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover-elevate"
-          >
-            <Github className="size-4" />
-          </a>
         </div>
       </div>
     </header>

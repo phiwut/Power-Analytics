@@ -13,6 +13,10 @@ function fmtDur(s: number) {
   return `${(s / 3600).toFixed(1)}h`;
 }
 
+function billingLabel(affectsBillingDemand: boolean) {
+  return affectsBillingDemand ? "yes" : "no";
+}
+
 export function SpikesTable({ spikes, onFocus }: Props) {
   if (spikes.length === 0) {
     return (
@@ -23,7 +27,7 @@ export function SpikesTable({ spikes, onFocus }: Props) {
   }
   const top = [...spikes].sort((a, b) => b.powerKw - a.powerKw).slice(0, 12);
   return (
-    <div className="overflow-hidden rounded-lg border border-card-border">
+    <div className="overflow-x-auto rounded-lg border border-card-border">
       <table className="w-full text-sm">
         <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
@@ -31,6 +35,8 @@ export function SpikesTable({ spikes, onFocus }: Props) {
             <th className="text-right px-3 py-2 font-semibold">Peak</th>
             <th className="text-right px-3 py-2 font-semibold">×Base</th>
             <th className="text-right px-3 py-2 font-semibold">Duration</th>
+            <th className="text-right px-3 py-2 font-semibold">Excess</th>
+            <th className="text-right px-3 py-2 font-semibold">15m</th>
             <th className="px-3 py-2"></th>
           </tr>
         </thead>
@@ -46,6 +52,12 @@ export function SpikesTable({ spikes, onFocus }: Props) {
               </td>
               <td className="px-3 py-2 text-right font-mono text-xs text-muted-foreground">
                 {fmtDur(s.durationSec)}
+              </td>
+              <td className="px-3 py-2 text-right font-mono text-xs text-muted-foreground">
+                {s.energyAboveThresholdKwh.toFixed(2)} kWh
+              </td>
+              <td className="px-3 py-2 text-right font-mono text-xs text-muted-foreground">
+                {billingLabel(s.affectsBillingDemand)}
               </td>
               <td className="px-3 py-2 text-right">
                 <Button size="sm" variant="ghost" onClick={() => onFocus(s.timestamp)}>

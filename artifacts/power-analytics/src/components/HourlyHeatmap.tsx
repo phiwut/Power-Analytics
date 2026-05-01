@@ -15,57 +15,79 @@ function quantile(sorted: number[], q: number): number {
 }
 
 export function HourlyHeatmap({ hourly }: Props) {
-  const peakValues = hourly
-    .map((h) => h.maxPowerKw)
+  const importPeakValues = hourly
+    .map((h) => h.peakImportKw)
     .filter((v) => Number.isFinite(v) && v > 0)
     .sort((a, b) => a - b);
-  const avgValues = hourly
-    .map((h) => h.avgPowerKw)
+  const exportPeakValues = hourly
+    .map((h) => h.peakExportKw)
+    .filter((v) => Number.isFinite(v) && v > 0)
+    .sort((a, b) => a - b);
+  const avgImportValues = hourly
+    .map((h) => Math.max(h.avgNetKw, 0))
+    .filter((v) => Number.isFinite(v) && v > 0)
+    .sort((a, b) => a - b);
+  const avgExportValues = hourly
+    .map((h) => Math.max(-h.avgNetKw, 0))
     .filter((v) => Number.isFinite(v) && v > 0)
     .sort((a, b) => a - b);
 
-  const absoluteMax = Math.max(...peakValues, 0);
-  const p90Peak = quantile(peakValues, 0.9);
-  const p95Avg = quantile(avgValues, 0.95);
-  const hasOutlier = p90Peak > 0 && absoluteMax / p90Peak >= 1.6;
-  // Adaptive y-scale: if a single hour is a strong outlier, scale to
-  // representative hours and clip the outlier; otherwise use full range.
-  const adaptiveCandidate = Math.max(0.5, p90Peak * 1.15, p95Avg * 1.2);
-  const yMax = absoluteMax > 0
-    ? hasOutlier
-      ? Math.min(absoluteMax, adaptiveCandidate)
-      : Math.max(absoluteMax, 0.5)
-    : 0.5;
+  const absImportMax = Math.max(...importPeakValues, 0);
+  const absExportMax = Math.max(...exportPeakValues, 0);
+  const p90ImportPeak = quantile(importPeakValues, 0.9);
+  const p90ExportPeak = quantile(exportPeakValues, 0.9);
+  const p95AvgImport = quantile(avgImportValues, 0.95);
+  const p95AvgExport = quantile(avgExportValues, 0.95);
+  const importOutlier = p90ImportPeak > 0 && absImportMax / p90ImportPeak >= 1.4;
+  const exportOutlier = p90ExportPeak > 0 && absExportMax / p90ExportPeak >= 1.4;
+  const hasOutlier = importOutlier || exportOutlier;
+
+  const adaptiveImport = Math.max(0.5, p90ImportPeak * 1.15, p95AvgImport * 1.2);
+  const adaptiveExport = Math.max(0.5, p90ExportPeak * 1.15, p95AvgExport * 1.2);
+  const yImportMax = absImportMax > 0 ? (importOutlier ? Math.min(absImportMax, adaptiveImport) : absImportMax) : 0;
+  const yExportMax = absExportMax > 0 ? (exportOutlier ? Math.min(absExportMax, adaptiveExport) : absExportMax) : 0;
+  const yAbs = Math.max(0.5, yImportMax, yExportMax);
 
   return (
     <div className="space-y-2">
-      <div className="flex items-end gap-1 h-40">
+      <div className="relative flex items-end gap-1 h-48">
+        <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
         {hourly.map((h) => {
-          const hAvgRaw = yMax > 0 ? (h.avgPowerKw / yMax) * 100 : 0;
-          const hMaxRaw = yMax > 0 ? (h.maxPowerKw / yMax) * 100 : 0;
-          const hAvg = Math.min(100, hAvgRaw);
-          const hMax = Math.min(100, hMaxRaw);
+          const hImportPeak = Math.min(50, yAbs > 0 ? (h.peakImportKw / yAbs) * 50 : 0);
+          const hExportPeak = Math.min(50, yAbs > 0 ? (h.peakExportKw / yAbs) * 50 : 0);
+          const hAvgImport = Math.min(50, yAbs > 0 ? (Math.max(h.avgNetKw, 0) / yAbs) * 50 : 0);
+          const hAvgExport = Math.min(50, yAbs > 0 ? (Math.max(-h.avgNetKw, 0) / yAbs) * 50 : 0);
           const hasData = h.count > 0 && h.durationHours > 0;
-          const clipped = h.maxPowerKw > yMax + 1e-9;
+          const clippedImport = h.peakImportKw > yAbs + 1e-9;
+          const clippedExport = h.peakExportKw > yAbs + 1e-9;
           return (
             <div
               key={h.hour}
               className={`flex-1 h-full group relative rounded-sm ${h.isPartial ? "ring-1 ring-amber-500/70" : ""}`}
               title={
                 hasData
-                  ? `${h.hour}:00 — avg ${h.avgPowerKw.toFixed(1)} kW, peak ${h.maxPowerKw.toFixed(1)} kW, coverage ${h.durationHours.toFixed(2)} h${h.isPartial ? " (partial hour coverage)" : ""}${clipped ? " (clipped by adaptive y-scale)" : ""}`
+                  ? `${h.hour}:00 — avg net ${h.avgNetKw.toFixed(1)} kW, peak import ${h.peakImportKw.toFixed(1)} kW, peak export ${h.peakExportKw.toFixed(1)} kW, coverage ${h.durationHours.toFixed(2)} h${h.isPartial ? " (partial hour coverage)" : ""}${clippedImport || clippedExport ? " (clipped by adaptive y-scale)" : ""}`
                   : `${h.hour}:00 — no data`
               }
             >
               <div
-                className="absolute inset-x-0 bottom-0 rounded-t bg-primary/30 group-hover:bg-primary/50 transition-colors"
-                style={{ height: `${hMax}%` }}
+                className="absolute inset-x-0 bottom-1/2 rounded-t bg-primary/30 group-hover:bg-primary/50 transition-colors"
+                style={{ height: `${hImportPeak}%` }}
               />
               <div
-                className="absolute inset-x-0 bottom-0 rounded-t bg-primary group-hover:bg-primary/90 transition-colors"
-                style={{ height: `${hAvg}%` }}
+                className="absolute inset-x-0 top-1/2 rounded-b bg-cyan-500/30 group-hover:bg-cyan-500/50 transition-colors"
+                style={{ height: `${hExportPeak}%` }}
               />
-              {clipped && <div className="absolute inset-x-0 top-0 h-0.5 bg-destructive/80" />}
+              <div
+                className="absolute inset-x-0 bottom-1/2 rounded-t bg-primary group-hover:bg-primary/90 transition-colors"
+                style={{ height: `${hAvgImport}%` }}
+              />
+              <div
+                className="absolute inset-x-0 top-1/2 rounded-b bg-cyan-500 group-hover:bg-cyan-400 transition-colors"
+                style={{ height: `${hAvgExport}%` }}
+              />
+              {clippedImport && <div className="absolute inset-x-0 top-0 h-0.5 bg-destructive/80" />}
+              {clippedExport && <div className="absolute inset-x-0 bottom-0 h-0.5 bg-destructive/80" />}
               {h.isPartial && (
                 <div className="absolute top-1 right-1 size-1.5 rounded-full bg-amber-500/80" />
               )}
@@ -81,18 +103,26 @@ export function HourlyHeatmap({ hourly }: Props) {
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-primary" />
-          Average
+          Avg net import (+)
         </div>
         <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-primary/30" />
-          Peak
+          Peak import (+)
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-3 rounded-sm bg-cyan-500" />
+          Avg net export (-)
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-3 rounded-sm bg-cyan-500/30" />
+          Peak export (-)
         </div>
         <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm border border-amber-500/80" />
           Partial coverage
         </div>
         <div className="ml-auto font-mono text-[10px]">
-          y-scale 0-{yMax.toFixed(1)} kW ({hasOutlier ? "adaptive" : "full range"})
+          y-scale ±{yAbs.toFixed(1)} kW ({hasOutlier ? "adaptive" : "full range"})
         </div>
       </div>
     </div>

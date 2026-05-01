@@ -26,6 +26,13 @@ import { SpikesTable } from "@/components/SpikesTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sliders } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
@@ -51,15 +58,37 @@ export default function Dashboard() {
     if (typeof window === "undefined") return false;
     return document.documentElement.classList.contains("dark");
   });
+  const [selectedProfileDay, setSelectedProfileDay] = useState<string>("all");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
+  useEffect(() => {
+    setSelectedProfileDay("all");
+  }, [ds?.startTime, ds?.endTime]);
+
   const result: AnalysisResult | null = useMemo(() => {
     if (!ds) return null;
     return analyse(ds, thresholds);
   }, [ds, thresholds]);
+
+  const profileHourly = useMemo(() => {
+    if (!result) return [];
+    if (selectedProfileDay === "all") return result.hourlyProfile;
+    return (
+      result.hourlyProfilesByDay.find((d) => String(d.dayStart) === selectedProfileDay)?.hourly ??
+      result.hourlyProfile
+    );
+  }, [result, selectedProfileDay]);
+
+  const selectedProfileLabel = useMemo(() => {
+    if (!result || selectedProfileDay === "all") return "All days";
+    return (
+      result.hourlyProfilesByDay.find((d) => String(d.dayStart) === selectedProfileDay)?.dayLabel ??
+      "All days"
+    );
+  }, [result, selectedProfileDay]);
 
   const onFile = useCallback(async (file: File) => {
     setBusy(true);
@@ -200,14 +229,31 @@ export default function Dashboard() {
                       <div>
                         <h3 className="font-semibold tracking-tight">Hourly load profile</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Average and peak import power per hour-of-day
+                          Average net load and import/export peaks per hour-of-day
                         </p>
                       </div>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        peak {result.kpi.peakPowerKw.toFixed(1)} kW · avg {result.kpi.avgPowerKw.toFixed(1)} kW
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {result.hourlyProfilesByDay.length > 1 && (
+                          <Select value={selectedProfileDay} onValueChange={setSelectedProfileDay}>
+                            <SelectTrigger className="h-8 w-[170px] text-xs">
+                              <SelectValue placeholder="Select day" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All days</SelectItem>
+                              {result.hourlyProfilesByDay.map((day) => (
+                                <SelectItem key={day.dayStart} value={String(day.dayStart)}>
+                                  {day.dayLabel}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {selectedProfileLabel} · peak {result.kpi.peakPowerKw.toFixed(1)} kW
+                        </span>
+                      </div>
                     </div>
-                    <HourlyHeatmap hourly={result.hourlyProfile} />
+                    <HourlyHeatmap hourly={profileHourly} />
                   </div>
                 </TabsContent>
                 <TabsContent value="spikes" className="mt-4">

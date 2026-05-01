@@ -118,6 +118,7 @@ export interface AnalysisResult {
   battery: BatteryAssessment;
   buckets: BucketStats[];
   hourlyProfile: HourlyProfile[];
+  hourlyProfilesByDay: HourlyProfileByDay[];
   spikes: SpikeEvent[];
 }
 
@@ -145,12 +146,24 @@ export interface BucketStats {
 
 export interface HourlyProfile {
   hour: number;
+  avgNetKw: number;
+  avgImportKw: number;
+  avgExportKw: number;
+  peakImportKw: number;
+  peakExportKw: number;
   avgPowerKw: number;
   maxPowerKw: number;
+  minPowerKw: number;
   count: number;
   durationHours: number;
   isPartial: boolean;
   partialCount: number;
+}
+
+export interface HourlyProfileByDay {
+  dayStart: number;
+  dayLabel: string;
+  hourly: HourlyProfile[];
 }
 
 function mean(arr: number[]): number {
@@ -759,13 +772,17 @@ export function analyse(
   const expectedIntervalMs = Math.max(1_000, ds.intervalSeconds * 1000);
   const maxRepresentedSegmentMs = expectedIntervalMs * 1.5;
   type HourlyAggregate = {
+    weightedNetSum: number;
     weightedImportSum: number;
+    weightedExportSum: number;
+    maxExportKw: number;
     durationMs: number;
     maxImportKw: number;
     count: number;
     slotDurations: Map<number, number>;
   };
   const hourlyMap = new Map<number, HourlyAggregate>();
+  const hourlyByDayMap = new Map<number, Map<number, HourlyAggregate>>();
   let droppedGapMs = 0;
   const lastFallbackEnd = rows.length
     ? rows[rows.length - 1]!.timestamp + ds.intervalSeconds * 1000
@@ -779,63 +796,118 @@ export function analyse(
     if (!(segEnd > segStart)) continue;
     droppedGapMs += Math.max(0, rawSegEnd - segEnd);
 
+    const netKw = powers[i]!;
     const importKw = importPowers[i]!;
+    const exportKw = exportPowers[i]!;
     let cursor = segStart;
     while (cursor < segEnd) {
       const hourStartDate = new Date(cursor);
       hourStartDate.setMinutes(0, 0, 0);
       const hourStartMs = hourStartDate.getTime();
+      const dayStartDate = new Date(cursor);
+      dayStartDate.setHours(0, 0, 0, 0);
+      const dayStartMs = dayStartDate.getTime();
       const hourEndMs = hourStartMs + HOUR_MS;
       const sliceEnd = Math.min(segEnd, hourEndMs);
       const sliceMs = sliceEnd - cursor;
       const hour = hourStartDate.getHours();
 
-      const cur = hourlyMap.get(hour) || {
-        weightedImportSum: 0,
-        durationMs: 0,
-        maxImportKw: 0,
-        count: 0,
-        slotDurations: new Map<number, number>(),
+      const updateAggregate = (
+        container: Map<number, HourlyAggregate>,
+      ) => {
+        const cur = container.get(hour) || {
+          weightedNetSum: 0,
+          weightedImportSum: 0,
+          weightedExportSum: 0,
+          maxExportKw: 0,
+          durationMs: 0,
+          maxImportKw: 0,
+          count: 0,
+          slotDurations: new Map<number, number>(),
+        };
+
+        cur.weightedNetSum += netKw * sliceMs;
+        cur.weightedImportSum += importKw * sliceMs;
+        cur.weightedExportSum += exportKw * sliceMs;
+        cur.durationMs += sliceMs;
+        cur.maxImportKw = Math.max(cur.maxImportKw, importKw);
+        cur.maxExportKw = Math.max(cur.maxExportKw, exportKw);
+        cur.count += 1;
+        cur.slotDurations.set(hourStartMs, (cur.slotDurations.get(hourStartMs) ?? 0) + sliceMs);
+        container.set(hour, cur);
       };
 
-      cur.weightedImportSum += importKw * sliceMs;
-      cur.durationMs += sliceMs;
-      cur.maxImportKw = Math.max(cur.maxImportKw, importKw);
-      cur.count += 1;
-      cur.slotDurations.set(hourStartMs, (cur.slotDurations.get(hourStartMs) ?? 0) + sliceMs);
-      hourlyMap.set(hour, cur);
+      updateAggregate(hourlyMap);
+      const dayMap = hourlyByDayMap.get(dayStartMs) ?? new Map<number, HourlyAggregate>();
+      updateAggregate(dayMap);
+      hourlyByDayMap.set(dayStartMs, dayMap);
       cursor = sliceEnd;
     }
   }
 
-  const hourlyProfile: HourlyProfile[] = [];
-  for (let h = 0; h < 24; h++) {
-    const m = hourlyMap.get(h);
-    if (m && m.durationMs > 0) {
-      const partialCount = [...m.slotDurations.values()].filter(
-        (dur) => dur < HOUR_MS - durationToleranceMs,
-      ).length;
-      hourlyProfile.push({
-        hour: h,
-        avgPowerKw: m.weightedImportSum / m.durationMs,
-        maxPowerKw: m.maxImportKw,
-        count: m.count,
-        durationHours: m.durationMs / HOUR_MS,
-        isPartial: partialCount > 0,
-        partialCount,
-      });
-    } else {
-      hourlyProfile.push({
-        hour: h,
-        avgPowerKw: 0,
-        maxPowerKw: 0,
-        count: 0,
-        durationHours: 0,
-        isPartial: false,
-        partialCount: 0,
-      });
+  const buildHourlyProfile = (map: Map<number, HourlyAggregate>): HourlyProfile[] => {
+    const out: HourlyProfile[] = [];
+    for (let h = 0; h < 24; h++) {
+      const m = map.get(h);
+      if (m && m.durationMs > 0) {
+        const partialCount = [...m.slotDurations.values()].filter(
+          (dur) => dur < HOUR_MS - durationToleranceMs,
+        ).length;
+        const avgNetKw = m.weightedNetSum / m.durationMs;
+        const avgImportKw = m.weightedImportSum / m.durationMs;
+        const avgExportKw = m.weightedExportSum / m.durationMs;
+        out.push({
+          hour: h,
+          avgNetKw,
+          avgImportKw,
+          avgExportKw,
+          peakImportKw: m.maxImportKw,
+          peakExportKw: m.maxExportKw,
+          avgPowerKw: avgImportKw,
+          maxPowerKw: m.maxImportKw,
+          minPowerKw: -m.maxExportKw,
+          count: m.count,
+          durationHours: m.durationMs / HOUR_MS,
+          isPartial: partialCount > 0,
+          partialCount,
+        });
+      } else {
+        out.push({
+          hour: h,
+          avgNetKw: 0,
+          avgImportKw: 0,
+          avgExportKw: 0,
+          peakImportKw: 0,
+          peakExportKw: 0,
+          avgPowerKw: 0,
+          maxPowerKw: 0,
+          minPowerKw: 0,
+          count: 0,
+          durationHours: 0,
+          isPartial: false,
+          partialCount: 0,
+        });
+      }
     }
-  }
+    return out;
+  };
+
+  const formatDayLabel = (dayStart: number): string => {
+    const d = new Date(dayStart);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const hourlyProfile = buildHourlyProfile(hourlyMap);
+  const hourlyProfilesByDay: HourlyProfileByDay[] = [...hourlyByDayMap.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([dayStart, map]) => ({
+      dayStart,
+      dayLabel: formatDayLabel(dayStart),
+      hourly: buildHourlyProfile(map),
+    }));
 
   if (droppedGapMs > 0) {
     const droppedHours = droppedGapMs / HOUR_MS;
@@ -848,7 +920,7 @@ export function analyse(
     });
   }
 
-  return { kpi, insights, battery, buckets, hourlyProfile, spikes };
+  return { kpi, insights, battery, buckets, hourlyProfile, hourlyProfilesByDay, spikes };
 }
 
 export function formatDuration(ms: number): string {

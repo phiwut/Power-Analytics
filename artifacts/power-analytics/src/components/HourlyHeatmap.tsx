@@ -16,8 +16,8 @@ export function HourlyHeatmap({ hourly }: Props) {
           return (
             <div
               key={h.hour}
-              className="flex-1 flex flex-col-reverse gap-0.5 group relative"
-              title={`${h.hour}:00 — avg ${h.avgPowerKw.toFixed(1)} kW, max ${h.maxPowerKw.toFixed(1)} kW`}
+              className={`flex-1 flex flex-col-reverse gap-0.5 group relative ${h.isPartial ? "ring-1 ring-amber-500/70 rounded-sm" : ""}`}
+              title={`${h.hour}:00 — avg ${h.avgPowerKw.toFixed(1)} kW, peak ${h.maxPowerKw.toFixed(1)} kW, coverage ${h.durationHours.toFixed(2)} h${h.isPartial ? " (partial hour coverage)" : ""}`}
             >
               <div
                 className="w-full rounded-t bg-primary/30 group-hover:bg-primary/50 transition-colors"
@@ -44,6 +44,10 @@ export function HourlyHeatmap({ hourly }: Props) {
         <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-primary/30" />
           Peak
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-3 rounded-sm border border-amber-500/80" />
+          Partial coverage
         </div>
       </div>
     </div>

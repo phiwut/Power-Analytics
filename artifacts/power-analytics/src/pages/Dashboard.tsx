@@ -200,7 +200,7 @@ export default function Dashboard() {
                       <div>
                         <h3 className="font-semibold tracking-tight">Hourly load profile</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Average and peak power per hour-of-day
+                          Average and peak import power per hour-of-day
                         </p>
                       </div>
                       <span className="text-xs text-muted-foreground font-mono">

@@ -148,6 +148,9 @@ export interface HourlyProfile {
   avgPowerKw: number;
   maxPowerKw: number;
   count: number;
+  durationHours: number;
+  isPartial: boolean;
+  partialCount: number;
 }
 
 function mean(arr: number[]): number {
@@ -749,28 +752,82 @@ export function analyse(
     });
   }
 
-  // Hourly profile
-  const hourlyMap = new Map<number, { sum: number; max: number; count: number }>();
+  // Hourly profile (hour-of-day across all days), weighted by observed
+  // duration so partial-hour windows and midnight crossings are represented.
+  const HOUR_MS = 3_600_000;
+  const durationToleranceMs = 1_000;
+  type HourlyAggregate = {
+    weightedImportSum: number;
+    durationMs: number;
+    maxImportKw: number;
+    count: number;
+    slotDurations: Map<number, number>;
+  };
+  const hourlyMap = new Map<number, HourlyAggregate>();
+  const lastFallbackEnd = rows.length
+    ? rows[rows.length - 1]!.timestamp + ds.intervalSeconds * 1000
+    : 0;
+
   for (let i = 0; i < rows.length; i++) {
-    const h = new Date(rows[i]!.timestamp).getHours();
-    const cur = hourlyMap.get(h) || { sum: 0, max: 0, count: 0 };
-    cur.sum += powers[i]!;
-    cur.max = Math.max(cur.max, powers[i]!);
-    cur.count += 1;
-    hourlyMap.set(h, cur);
+    const segStart = rows[i]!.timestamp;
+    const segEnd = i + 1 < rows.length ? rows[i + 1]!.timestamp : lastFallbackEnd;
+    if (!(segEnd > segStart)) continue;
+
+    const importKw = importPowers[i]!;
+    let cursor = segStart;
+    while (cursor < segEnd) {
+      const hourStartDate = new Date(cursor);
+      hourStartDate.setMinutes(0, 0, 0);
+      const hourStartMs = hourStartDate.getTime();
+      const hourEndMs = hourStartMs + HOUR_MS;
+      const sliceEnd = Math.min(segEnd, hourEndMs);
+      const sliceMs = sliceEnd - cursor;
+      const hour = hourStartDate.getHours();
+
+      const cur = hourlyMap.get(hour) || {
+        weightedImportSum: 0,
+        durationMs: 0,
+        maxImportKw: 0,
+        count: 0,
+        slotDurations: new Map<number, number>(),
+      };
+
+      cur.weightedImportSum += importKw * sliceMs;
+      cur.durationMs += sliceMs;
+      cur.maxImportKw = Math.max(cur.maxImportKw, importKw);
+      cur.count += 1;
+      cur.slotDurations.set(hourStartMs, (cur.slotDurations.get(hourStartMs) ?? 0) + sliceMs);
+      hourlyMap.set(hour, cur);
+      cursor = sliceEnd;
+    }
   }
+
   const hourlyProfile: HourlyProfile[] = [];
   for (let h = 0; h < 24; h++) {
     const m = hourlyMap.get(h);
-    if (m && m.count > 0) {
+    if (m && m.durationMs > 0) {
+      const partialCount = [...m.slotDurations.values()].filter(
+        (dur) => dur < HOUR_MS - durationToleranceMs,
+      ).length;
       hourlyProfile.push({
         hour: h,
-        avgPowerKw: m.sum / m.count,
-        maxPowerKw: m.max,
+        avgPowerKw: m.weightedImportSum / m.durationMs,
+        maxPowerKw: m.maxImportKw,
         count: m.count,
+        durationHours: m.durationMs / HOUR_MS,
+        isPartial: partialCount > 0,
+        partialCount,
       });
     } else {
-      hourlyProfile.push({ hour: h, avgPowerKw: 0, maxPowerKw: 0, count: 0 });
+      hourlyProfile.push({
+        hour: h,
+        avgPowerKw: 0,
+        maxPowerKw: 0,
+        count: 0,
+        durationHours: 0,
+        isPartial: false,
+        partialCount: 0,
+      });
     }
   }
 

@@ -45,6 +45,16 @@ import {
   type AnalysisResult,
 } from "@/lib/analysis";
 import { exportFindingsCsv, exportFindingsJson, exportPdfReport } from "@/lib/export";
+import { buildChatGptPrompt } from "@/lib/chatgptPrompt";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Dashboard() {
   const [ds, setDs] = useState<ParsedDataset | null>(null);
@@ -59,6 +69,10 @@ export default function Dashboard() {
     return document.documentElement.classList.contains("dark");
   });
   const [selectedProfileDay, setSelectedProfileDay] = useState<string>("all");
+  const [chatModalOpen, setChatModalOpen] = useState(false);
+  const [chatPrompt, setChatPrompt] = useState("");
+  const [showPromptInModal, setShowPromptInModal] = useState(false);
+  const [clipboardFailed, setClipboardFailed] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -161,6 +175,41 @@ export default function Dashboard() {
     [ds],
   );
 
+  const askChatGpt = useCallback(async () => {
+    if (!ds || !result) return;
+    const { finalPrompt } = buildChatGptPrompt(ds, result);
+    setChatPrompt(finalPrompt);
+    setShowPromptInModal(false);
+    setClipboardFailed(false);
+    try {
+      await navigator.clipboard.writeText(finalPrompt);
+    } catch {
+      setClipboardFailed(true);
+      setShowPromptInModal(true);
+    } finally {
+      setChatModalOpen(true);
+    }
+  }, [ds, result]);
+
+  const copyPromptAgain = useCallback(async () => {
+    if (!chatPrompt) return;
+    try {
+      await navigator.clipboard.writeText(chatPrompt);
+      setClipboardFailed(false);
+      toast({
+        title: "Prompt kopiert",
+        description: "Der Prompt ist erneut in der Zwischenablage.",
+      });
+    } catch {
+      setClipboardFailed(true);
+      toast({
+        title: "Kopieren fehlgeschlagen",
+        description: "Bitte den Prompt im Textfeld manuell kopieren.",
+        variant: "destructive",
+      });
+    }
+  }, [chatPrompt]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader
@@ -172,6 +221,7 @@ export default function Dashboard() {
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
         onLoadSample={loadSample}
+        onAskChatGpt={ds && result ? askChatGpt : undefined}
       />
 
       {!ds && <EmptyState onFile={onFile} busy={busy} onLoadSample={loadSample} />}
@@ -299,7 +349,86 @@ export default function Dashboard() {
       )}
 
       <Toaster />
+      <ChatGptPromptModal
+        open={chatModalOpen}
+        onOpenChange={setChatModalOpen}
+        prompt={chatPrompt}
+        showPrompt={showPromptInModal}
+        onShowPrompt={() => setShowPromptInModal(true)}
+        onCopyAgain={copyPromptAgain}
+        clipboardFailed={clipboardFailed}
+      />
     </div>
+  );
+}
+
+function ChatGptPromptModal({
+  open,
+  onOpenChange,
+  prompt,
+  showPrompt,
+  onShowPrompt,
+  onCopyAgain,
+  clipboardFailed,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  prompt: string;
+  showPrompt: boolean;
+  onShowPrompt: () => void;
+  onCopyAgain: () => void;
+  clipboardFailed: boolean;
+}) {
+  const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (open && showPrompt && textareaRef) {
+      textareaRef.focus();
+      textareaRef.select();
+    }
+  }, [open, showPrompt, textareaRef]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Prompt kopiert</DialogTitle>
+          <DialogDescription>
+            Die wichtigsten Mess- und Analysewerte wurden als kompakter Prompt in deine
+            Zwischenablage kopiert. Öffne ChatGPT und füge den Prompt dort ein.
+          </DialogDescription>
+        </DialogHeader>
+
+        {clipboardFailed && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+            Automatisches Kopieren war nicht möglich. Bitte den Text manuell kopieren.
+          </div>
+        )}
+
+        {(showPrompt || clipboardFailed) && (
+          <Textarea
+            ref={setTextareaRef}
+            value={prompt}
+            readOnly
+            className="min-h-[220px] font-mono text-xs"
+          />
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onShowPrompt}>
+            Prompt anzeigen
+          </Button>
+          <Button variant="outline" onClick={onCopyAgain}>
+            Nochmals kopieren
+          </Button>
+          <Button asChild>
+            <a href="https://chatgpt.com/" target="_blank" rel="noreferrer">
+              ChatGPT öffnen
+            </a>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

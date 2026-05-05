@@ -1,4 +1,4 @@
-import { Activity, Moon, Sun, Download, FileJson, FileSpreadsheet, FileText } from "lucide-react";
+import { Activity, Moon, Sun, Download, FileJson, FileSpreadsheet, FileText, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ interface Props {
   dark: boolean;
   onToggleDark: () => void;
   onLoadSample?: () => void;
+  onAskChatGpt?: () => void;
 }
 
 export function AppHeader({
@@ -29,6 +30,7 @@ export function AppHeader({
   dark,
   onToggleDark,
   onLoadSample,
+  onAskChatGpt,
 }: Props) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
@@ -85,6 +87,17 @@ export function AppHeader({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          )}
+          {fileName && onAskChatGpt && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onAskChatGpt}
+              title="Kopiert eine kompakte Analyse-Zusammenfassung für ChatGPT."
+            >
+              <MessageCircle className="size-4 mr-1.5" />
+              ChatGPT fragen
+            </Button>
           )}
           <Button size="sm" variant="ghost" onClick={onToggleDark}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}

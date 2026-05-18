@@ -1,5 +1,6 @@
 import type { AnalysisResult } from "@/lib/analysis";
 import type { ParsedDataset } from "@/lib/parser";
+import { maxNumber, maxNumberOr, mean, minNumberOr } from "@/lib/stats";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -20,10 +21,6 @@ interface PhaseStat {
   thdAMax: number;
 }
 
-function mean(arr: number[]) {
-  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-}
-
 const PHASE_COLORS = {
   L1: "hsl(var(--chart-1))",
   L2: "hsl(var(--chart-2))",
@@ -32,7 +29,7 @@ const PHASE_COLORS = {
 
 export function PhaseGauges({ ds, result }: Props) {
   const wattScale = result.kpi.peakPowerKw > 0 && result.kpi.peakPowerKw < 100
-    ? Math.max(...ds.rows.map((r) => r.power.total)) > 1000 ? 1 / 1000 : 1
+    ? maxNumber(ds.rows.map((r) => r.power.total), 0) > 1000 ? 1 / 1000 : 1
     : 1 / 1000;
 
   const stats: PhaseStat[] = (["L1", "L2", "L3"] as const).map((p) => {
@@ -46,14 +43,14 @@ export function PhaseGauges({ ds, result }: Props) {
     return {
       phase: p,
       voltageAvg: mean(v),
-      voltageMin: v.length ? Math.min(...v) : 0,
-      voltageMax: v.length ? Math.max(...v) : 0,
+      voltageMin: v.length ? minNumberOr(v, 0) : 0,
+      voltageMax: v.length ? maxNumber(v, 0) : 0,
       currentAvg: mean(i),
-      currentMax: i.length ? Math.max(...i) : 0,
+      currentMax: i.length ? maxNumber(i, 0) : 0,
       powerAvg: mean(power) * wattScale,
-      powerMax: power.length ? Math.max(...power) * wattScale : 0,
-      thdVMax: thdV.length ? Math.max(...thdV) : 0,
-      thdAMax: thdA.length ? Math.max(...thdA) : 0,
+      powerMax: power.length ? maxNumberOr(power, 0) * wattScale : 0,
+      thdVMax: thdV.length ? maxNumber(thdV, 0) : 0,
+      thdAMax: thdA.length ? maxNumber(thdA, 0) : 0,
     };
   });
 

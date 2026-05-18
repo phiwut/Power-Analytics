@@ -1,4 +1,5 @@
 import type { MeasurementRow, ParsedDataset } from "./parser";
+import { maxNumber, maxNumberOr, mean, minNumberOr } from "./stats";
 
 export interface Thresholds {
   voltageNominal: number; // V
@@ -166,11 +167,6 @@ export interface HourlyProfileByDay {
   hourly: HourlyProfile[];
 }
 
-function mean(arr: number[]): number {
-  if (arr.length === 0) return 0;
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
-
 function stdev(arr: number[]): number {
   if (arr.length < 2) return 0;
   const m = mean(arr);
@@ -209,7 +205,7 @@ function imbalancePct(v1: number, v2: number, v3: number): number {
   if (vals.length === 0) return 0;
   const avg = mean(vals);
   if (avg === 0) return 0;
-  const maxDev = Math.max(...vals.map((v) => Math.abs(v - avg)));
+  const maxDev = maxNumber(vals.map((v) => Math.abs(v - avg)));
   return (maxDev / avg) * 100;
 }
 
@@ -231,10 +227,10 @@ export function analyse(
   const positiveImportPowers = importPowers.filter((p) => p > 0);
   const sortedImportPowers = [...positiveImportPowers].sort((a, b) => a - b);
 
-  const peakPowerKw = Math.max(...powers, 0);
+  const peakPowerKw = maxNumber(powers, 0);
   const peakIdx = powers.indexOf(peakPowerKw);
   const peakPowerAt = rows[peakIdx]?.timestamp ?? rows[0]!.timestamp;
-  const minPowerKw = Math.min(...powers);
+  const minPowerKw = minNumberOr(powers, 0);
   const avgPowerKw = mean(importPowers);
   const baseLoadKw = quantile(sortedImportPowers, 0.10);
 
@@ -242,24 +238,24 @@ export function analyse(
   const intervalH = ds.intervalSeconds / 3600;
   const energyKwh = importPowers.reduce((a, b) => a + b * intervalH, 0);
   const exportEnergyKwh = exportPowers.reduce((a, b) => a + b * intervalH, 0);
-  const exportPeakKw = Math.max(...exportPowers, 0);
+  const exportPeakKw = maxNumber(exportPowers, 0);
   const durationHours = ds.durationMs / 3_600_000;
 
   // Voltage stats
   const allV = rows.flatMap((r) => [r.voltage.L1, r.voltage.L2, r.voltage.L3]).filter((v) => v > 0);
   const voltageAvg = mean(allV);
-  const voltageMin = Math.min(...allV);
-  const voltageMax = Math.max(...allV);
+  const voltageMin = minNumberOr(allV, 0);
+  const voltageMax = maxNumber(allV, 0);
   const voltageStability = voltageAvg ? (stdev(allV) / voltageAvg) * 100 : 0;
 
   // Imbalance
   const imbal = rows.map((r) => imbalancePct(r.voltage.L1, r.voltage.L2, r.voltage.L3));
   const imbalAvg = mean(imbal);
-  const imbalMax = Math.max(...imbal, 0);
+  const imbalMax = maxNumber(imbal, 0);
 
   // PF is meaningful only during material import. Export and near-zero load
   // periods are tracked separately instead of being treated as poor PF.
-  const peakImportKw = Math.max(...importPowers, 0);
+  const peakImportKw = maxNumber(importPowers, 0);
   const pfImportMinKw = Math.max(thresholds.pfMinImportKw, peakImportKw * 0.02);
   const pfImportVals = rows
     .map((r, i) => ({ pf: r.pf.total, p: powers[i]! }))
@@ -273,7 +269,7 @@ export function analyse(
     (r, i) => typeof r.pf.total === "number" && powers[i]! < pfImportMinKw,
   ).length;
   const pfAvg = pfImportVals.length ? mean(pfImportVals) : 1;
-  const pfMin = pfImportVals.length ? Math.min(...pfImportVals) : 1;
+  const pfMin = pfImportVals.length ? minNumberOr(pfImportVals, 1) : 1;
 
   // THD
   const thdVAll = rows
@@ -281,12 +277,12 @@ export function analyse(
     .filter((v): v is number => typeof v === "number");
   const thdVNonZero = nonZeroValues(thdVAll);
   const thdVAvailable = thdVNonZero.length > 0;
-  const thdVMax = thdVAvailable ? Math.max(...thdVNonZero) : 0;
+  const thdVMax = thdVAvailable ? maxNumber(thdVNonZero, 0) : 0;
 
   const phaseCurrentValues = rows
     .flatMap((r) => [r.current.L1, r.current.L2, r.current.L3])
     .filter((v) => v > 0);
-  const phaseCurrentPeak = Math.max(...phaseCurrentValues, 0);
+  const phaseCurrentPeak = maxNumber(phaseCurrentValues, 0);
   const thdALoadThresholdA = Math.max(
     thresholds.thdAMinCurrentA,
     (phaseCurrentPeak * thresholds.thdAMinCurrentPeakPct) / 100,
@@ -306,24 +302,24 @@ export function analyse(
       )
       .map((x) => x.thd),
   );
-  const thdAMax = thdAAll.length ? Math.max(...thdAAll) : 0;
-  const thdAHighLoadMax = thdAHighLoad.length ? Math.max(...thdAHighLoad) : 0;
+  const thdAMax = thdAAll.length ? maxNumber(thdAAll, 0) : 0;
+  const thdAHighLoadMax = thdAHighLoad.length ? maxNumber(thdAHighLoad, 0) : 0;
 
   // Frequency
   const freqVals = rows.map((r) => r.frequency).filter((v): v is number => typeof v === "number");
   const frequencyAvg = freqVals.length ? mean(freqVals) : 0;
-  const frequencyMin = freqVals.length ? Math.min(...freqVals) : 0;
-  const frequencyMax = freqVals.length ? Math.max(...freqVals) : 0;
+  const frequencyMin = freqVals.length ? minNumberOr(freqVals, 0) : 0;
+  const frequencyMax = freqVals.length ? maxNumber(freqVals, 0) : 0;
 
   // Neutral
   const neutVals = rows.map((r) => r.current.N).filter((v): v is number => typeof v === "number");
-  const neutralCurrentMax = neutVals.length ? Math.max(...neutVals) : 0;
+  const neutralCurrentMax = neutVals.length ? maxNumber(neutVals, 0) : 0;
   const phaseCurrentAvg = mean(phaseCurrentValues);
 
   const billingWindowSamples = Math.max(1, Math.ceil(900 / ds.intervalSeconds));
   const billingDemand = rollingAverage(importPowers, billingWindowSamples);
   const sortedBillingDemand = [...billingDemand].sort((a, b) => a - b);
-  const billingPeak15MinKw = Math.max(...billingDemand, 0);
+  const billingPeak15MinKw = maxNumber(billingDemand, 0);
   const billingTarget15MinKw = quantile(sortedBillingDemand, 0.95);
 
   const spikeAffectsBilling = (startIdx: number, endExclusiveIdx: number): boolean => {
@@ -655,7 +651,7 @@ export function analyse(
       title: `${spikes.length} load spike${spikes.length === 1 ? "" : "s"} detected`,
       detail: isCyclic
         ? `Spikes recur every ~${formatDuration(avgInterval * 1000)} — consistent with cyclic equipment (compressor, motor, oven).`
-        : `Spike events reach up to ${Math.max(...spikes.map((s) => s.powerKw)).toFixed(
+        : `Spike events reach up to ${maxNumber(spikes.map((s) => s.powerKw), 0).toFixed(
             1,
           )} kW vs ${baseLoadKw.toFixed(1)} kW import base load. ${spikes.filter((s) => s.affectsBillingDemand).length} event${spikes.filter((s) => s.affectsBillingDemand).length === 1 ? "" : "s"} affect 15-minute demand.`,
     });
@@ -757,8 +753,8 @@ export function analyse(
       start: slice[0]!.timestamp,
       end: slice[slice.length - 1]!.timestamp,
       avgPowerKw: mean(ps),
-      maxPowerKw: Math.max(...ps),
-      minPowerKw: Math.min(...ps),
+      maxPowerKw: maxNumberOr(ps, 0),
+      minPowerKw: minNumberOr(ps, 0),
       voltageAvg: mean(vs),
       pfAvg: pfs.length ? mean(pfs) : 1,
       imbalancePct: mean(imbs),

@@ -1,5 +1,6 @@
 import type { AnalysisResult, Insight, Severity, SpikeEvent } from "@/lib/analysis";
 import type { ParsedDataset } from "@/lib/parser";
+import { maxNumber } from "@/lib/stats";
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -256,7 +257,7 @@ export function buildChatGptPrompt(ds: ParsedDataset, result: AnalysisResult): P
       spikes: {
         count: result.spikes.length,
         billing_relevant_15min_count: result.spikes.filter((s) => s.affectsBillingDemand).length,
-        peak_to_base_ratio_max: round(Math.max(...result.spikes.map((s) => s.ratioToBase), 0), 3),
+        peak_to_base_ratio_max: round(maxNumber(result.spikes.map((s) => s.ratioToBase), 0), 3),
       },
       battery_recommendation: {
         power_kw: round(result.battery.recommendedKw, 0),

@@ -1,4 +1,5 @@
 import type { HourlyProfile } from "@/lib/analysis";
+import { maxNumber } from "@/lib/stats";
 
 interface Props {
   hourly: HourlyProfile[];
@@ -32,8 +33,8 @@ export function HourlyHeatmap({ hourly }: Props) {
     .filter((v) => Number.isFinite(v) && v > 0)
     .sort((a, b) => a - b);
 
-  const absImportMax = Math.max(...importPeakValues, 0);
-  const absExportMax = Math.max(...exportPeakValues, 0);
+  const absImportMax = maxNumber(importPeakValues, 0);
+  const absExportMax = maxNumber(exportPeakValues, 0);
   const p90ImportPeak = quantile(importPeakValues, 0.9);
   const p90ExportPeak = quantile(exportPeakValues, 0.9);
   const p95AvgImport = quantile(avgImportValues, 0.95);

@@ -8,6 +8,7 @@ type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 interface PromptBuildResult {
   compactReport: { [key: string]: JsonValue };
   finalPrompt: string;
+  truncated: boolean;
 }
 
 const MAX_FINDINGS = 8;
@@ -279,11 +280,13 @@ export function buildChatGptPrompt(ds: ParsedDataset, result: AnalysisResult): P
 
   const compactReportJson = JSON.stringify(compactReport, null, 2);
   let finalPrompt = buildPromptInstructions(compactReportJson);
+  let truncated = false;
   if (finalPrompt.length > MAX_PROMPT_CHARS) {
     compactReport.top_peak_events = topPeakEvents.slice(0, 5);
     compactReport.top_findings = topFindings.slice(0, 5);
     finalPrompt = buildPromptInstructions(JSON.stringify(compactReport, null, 2));
+    truncated = finalPrompt.length > MAX_PROMPT_CHARS;
   }
 
-  return { compactReport, finalPrompt: finalPrompt.slice(0, MAX_PROMPT_CHARS) };
+  return { compactReport, finalPrompt: finalPrompt.slice(0, MAX_PROMPT_CHARS), truncated };
 }

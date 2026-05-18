@@ -93,10 +93,10 @@ export function AppHeader({
               size="sm"
               variant="outline"
               onClick={onAskChatGpt}
-              title="Kopiert eine kompakte Analyse-Zusammenfassung für ChatGPT."
+              title="Copy a compact analysis summary for ChatGPT."
             >
               <MessageCircle className="size-4 mr-1.5" />
-              ChatGPT fragen
+              Ask ChatGPT
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={onToggleDark}>

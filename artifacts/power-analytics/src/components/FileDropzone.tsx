@@ -44,7 +44,7 @@ export function FileDropzone({
       className={cn(
         "relative cursor-pointer rounded-xl border-2 border-dashed transition-all",
         over ? "border-primary bg-primary/5" : "border-border bg-card",
-        compact ? "p-4" : "p-12",
+        compact ? "p-4" : "p-6 sm:p-12",
       )}
     >
       <input
@@ -61,7 +61,7 @@ export function FileDropzone({
         <div
           className={cn(
             "flex items-center justify-center rounded-full bg-primary/10",
-            compact ? "size-10" : "size-16",
+            compact ? "size-10" : "size-14 sm:size-16",
           )}
         >
           {busy ? (
@@ -69,11 +69,11 @@ export function FileDropzone({
           ) : compact ? (
             <FileText className="size-5 text-primary" />
           ) : (
-            <Upload className="size-7 text-primary" />
+            <Upload className="size-6 text-primary sm:size-7" />
           )}
         </div>
         <div className={cn(compact ? "" : "space-y-2")}>
-          <h3 className={cn("font-semibold", compact ? "text-sm" : "text-lg")}>
+          <h3 className={cn("font-semibold", compact ? "text-sm" : "text-base sm:text-lg")}>
             {busy ? "Parsing file…" : compact ? compactTitle : title}
           </h3>
           {!compact && (

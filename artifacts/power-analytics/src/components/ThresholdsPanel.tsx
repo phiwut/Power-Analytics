@@ -17,13 +17,13 @@ export function ThresholdsPanel({ thresholds, onChange }: Props) {
   const num = (k: keyof Thresholds, label: string, step = 0.1, suffix = "") => (
     <div className="flex items-center justify-between gap-3">
       <Label className="text-xs text-muted-foreground flex-1">{label}</Label>
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <Input
           type="number"
           step={step}
           value={thresholds[k]}
           onChange={(e) => set(k, parseFloat(e.target.value) as Thresholds[typeof k])}
-          className="h-8 w-24 font-mono text-sm tabular-nums"
+          className="h-8 w-20 font-mono text-sm tabular-nums sm:w-24"
         />
         {suffix && <span className="text-xs text-muted-foreground w-6">{suffix}</span>}
       </div>

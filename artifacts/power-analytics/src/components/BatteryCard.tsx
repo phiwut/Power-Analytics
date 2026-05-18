@@ -12,8 +12,8 @@ export function BatteryCard({ result }: { result: AnalysisResult }) {
         : "bg-card border-card-border";
 
   return (
-    <div className={`shadcn-card rounded-xl border p-6 ${tone}`}>
-      <div className="flex items-center justify-between mb-4">
+    <div className={`shadcn-card rounded-xl border p-4 sm:p-6 ${tone}`}>
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <Battery className="size-5" />
@@ -27,12 +27,12 @@ export function BatteryCard({ result }: { result: AnalysisResult }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-5">
+      <div className="mb-5 grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
         <div>
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
             Recommended power
           </div>
-          <div className="text-2xl font-mono font-semibold tabular-nums">
+          <div className="font-mono text-xl font-semibold tabular-nums sm:text-2xl">
             {battery.recommendedKw.toFixed(0)}
             <span className="text-sm text-muted-foreground ml-1">kW</span>
           </div>
@@ -41,7 +41,7 @@ export function BatteryCard({ result }: { result: AnalysisResult }) {
           <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
             Recommended energy
           </div>
-          <div className="text-2xl font-mono font-semibold tabular-nums">
+          <div className="font-mono text-xl font-semibold tabular-nums sm:text-2xl">
             {battery.recommendedKwh.toFixed(0)}
             <span className="text-sm text-muted-foreground ml-1">kWh</span>
           </div>

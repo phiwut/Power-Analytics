@@ -28,7 +28,7 @@ export function SpikesTable({ spikes, onFocus }: Props) {
   const top = [...spikes].sort((a, b) => b.powerKw - a.powerKw).slice(0, 12);
   return (
     <div className="overflow-x-auto rounded-lg border border-card-border">
-      <table className="w-full text-sm">
+      <table className="min-w-[720px] w-full text-sm">
         <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="text-left px-3 py-2 font-semibold">When</th>

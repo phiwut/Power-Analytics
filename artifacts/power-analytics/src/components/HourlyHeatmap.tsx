@@ -50,8 +50,8 @@ export function HourlyHeatmap({ hourly }: Props) {
   const yAbs = Math.max(0.5, yImportMax, yExportMax);
 
   return (
-    <div className="space-y-2">
-      <div className="relative flex items-end gap-1 h-48">
+    <div className="space-y-2 overflow-x-auto pb-1">
+      <div className="relative flex h-44 min-w-[520px] items-end gap-1 sm:h-48 sm:min-w-0">
         <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
         {hourly.map((h) => {
           const hImportPeak = Math.min(50, yAbs > 0 ? (h.peakImportKw / yAbs) * 50 : 0);
@@ -96,12 +96,12 @@ export function HourlyHeatmap({ hourly }: Props) {
           );
         })}
       </div>
-      <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+      <div className="flex min-w-[520px] justify-between font-mono text-[10px] text-muted-foreground sm:min-w-0">
         {[0, 6, 12, 18, 23].map((h) => (
           <span key={h}>{String(h).padStart(2, "0")}:00</span>
         ))}
       </div>
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground sm:gap-4">
         <div className="flex items-center gap-1.5">
           <span className="size-3 rounded-sm bg-primary" />
           Avg net import (+)
@@ -122,7 +122,7 @@ export function HourlyHeatmap({ hourly }: Props) {
           <span className="size-3 rounded-sm border border-amber-500/80" />
           Partial coverage
         </div>
-        <div className="ml-auto font-mono text-[10px]">
+        <div className="w-full font-mono text-[10px] sm:ml-auto sm:w-auto">
           y-scale ±{yAbs.toFixed(1)} kW ({hasOutlier ? "adaptive" : "full range"})
         </div>
       </div>

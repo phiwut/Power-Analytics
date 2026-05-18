@@ -292,7 +292,7 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <AppHeader dark={false} onToggleDark={() => undefined} hideThemeToggle />
-        <main className="mx-auto max-w-3xl px-6 py-16">
+        <main className="mx-auto max-w-3xl px-3 py-10 sm:px-6 sm:py-16">
           <div className="rounded-2xl border border-card-border bg-card p-8">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Glossary
@@ -318,8 +318,8 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader dark={false} onToggleDark={() => undefined} hideThemeToggle />
 
-      <main className="mx-auto max-w-[1320px] px-6 py-8 space-y-8">
-        <section className="rounded-2xl border border-card-border bg-card px-6 py-8">
+      <main className="mx-auto max-w-[1320px] space-y-5 px-3 py-4 sm:space-y-8 sm:px-6 sm:py-8">
+        <section className="rounded-2xl border border-card-border bg-card px-4 py-5 sm:px-6 sm:py-8">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Link href="/" className="inline-flex items-center gap-1 hover:text-foreground">
               <ArrowLeft className="size-3.5" />
@@ -340,13 +340,13 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
                 {term.heroKicker}
               </div>
               <div>
-                <h1 className="text-4xl font-semibold tracking-tight">{term.title}</h1>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{term.title}</h1>
                 <p className="mt-3 max-w-3xl text-base leading-7 text-muted-foreground">{term.summary}</p>
               </div>
               <p className="max-w-3xl text-base leading-7">{term.plainLanguage}</p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="grid gap-3 min-[520px]:grid-cols-2 lg:grid-cols-1">
               <FactTile label="Unit" value={term.unit || "ratio"} body="Displayed in the dashboard exactly this way." />
               <FactTile label="Quick take" value={term.quickTake} body="Short interpretation for a first read." />
               {term.formula ? <FactTile label="Formula" value={term.formula} body="Rule of thumb used in the explanation." /> : null}
@@ -355,7 +355,7 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
-          <div className="rounded-2xl border border-card-border bg-card p-6">
+          <div className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -372,7 +372,7 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-card-border bg-card p-6">
+          <div className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Good vs bad
             </div>
@@ -383,13 +383,13 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-card-border bg-card p-6">
+        <section className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Interpretation guide
               </div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+              <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">
                 How to interpret {term.title.toLowerCase()} quickly.
               </h2>
             </div>
@@ -410,20 +410,20 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-card-border bg-card p-6">
+        <section className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Interactive examples
               </div>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight">See how the value behaves in context.</h2>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">See how the value behaves in context.</h2>
             </div>
             <div className="text-sm text-muted-foreground">
               Switch between healthy, borderline and poor scenarios.
             </div>
           </div>
 
-          <div className="mt-6 grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="mt-6 grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)] xl:gap-6">
             <div className="space-y-3">
               {term.examples.map((example, index) => (
                 <button
@@ -451,7 +451,7 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
             </div>
 
             {selectedExample ? (
-              <div className="rounded-2xl border border-card-border bg-background/65 p-4">
+              <div className="rounded-2xl border border-card-border bg-background/65 p-3 sm:p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -464,7 +464,7 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
                   </span>
                 </div>
 
-                <div className="mt-4 h-[320px] w-full">
+                <div className="mt-4 h-[260px] w-full sm:h-[320px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={selectedExample.samplePoints.map((value, index) => ({
@@ -553,7 +553,7 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="rounded-2xl border border-card-border bg-card p-6">
+          <div className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               FAQ
             </h2>
@@ -567,7 +567,7 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-card-border bg-card p-6">
+          <div className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Related terms
             </h2>
@@ -659,7 +659,7 @@ function ContentListCard({
   items: string[];
 }) {
   return (
-    <section className="rounded-2xl border border-card-border bg-card p-6">
+    <section className="rounded-2xl border border-card-border bg-card p-4 sm:p-6">
       <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{body}</p>
       <ul className="mt-4 space-y-3">

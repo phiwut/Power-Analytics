@@ -282,12 +282,12 @@ export default function Dashboard() {
       {!ds && <EmptyState onFile={onFile} busy={busy} onLoadSample={loadSample} />}
 
       {ds && result && range && (
-        <main className="max-w-[1600px] mx-auto px-6 py-6 space-y-6">
+        <main className="mx-auto max-w-[1600px] space-y-4 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-6">
           <KpiRow result={result} />
 
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
-            <div className="space-y-6 min-w-0">
-              <section className="shadcn-card rounded-xl border bg-card p-5 space-y-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_360px] xl:gap-6">
+            <div className="min-w-0 space-y-4 sm:space-y-6">
+              <section className="shadcn-card space-y-4 rounded-xl border bg-card p-3 sm:p-5">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <h2 className="font-semibold tracking-tight">
@@ -304,7 +304,7 @@ export default function Dashboard() {
                         Thresholds
                       </Button>
                     </SheetTrigger>
-                    <SheetContent className="w-[380px] sm:w-[420px] overflow-y-auto">
+                    <SheetContent className="w-[92vw] overflow-y-auto sm:w-[420px]">
                       <ThresholdsPanel thresholds={thresholds} onChange={setThresholds} />
                     </SheetContent>
                   </Sheet>
@@ -320,7 +320,7 @@ export default function Dashboard() {
               </section>
 
               <Tabs defaultValue="phases" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 max-w-xl">
+                <TabsList className="grid h-auto w-full max-w-xl grid-cols-2 gap-1 sm:grid-cols-4">
                   <TabsTrigger value="phases">Phases</TabsTrigger>
                   <TabsTrigger value="profile">Profile</TabsTrigger>
                   <TabsTrigger value="spikes">Spikes</TabsTrigger>
@@ -330,18 +330,18 @@ export default function Dashboard() {
                   <PhaseGauges ds={ds} result={result} />
                 </TabsContent>
                 <TabsContent value="profile" className="mt-4">
-                  <div className="shadcn-card rounded-xl border bg-card p-6">
-                    <div className="flex items-baseline justify-between mb-4">
+                  <div className="shadcn-card rounded-xl border bg-card p-3 sm:p-6">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
                       <div>
                         <h3 className="font-semibold tracking-tight">Hourly load profile</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Average net load and import/export peaks per hour-of-day
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {result.hourlyProfilesByDay.length > 1 && (
                           <Select value={selectedProfileDay} onValueChange={setSelectedProfileDay}>
-                            <SelectTrigger className="h-8 w-[170px] text-xs">
+                            <SelectTrigger className="h-8 w-[170px] max-w-full text-xs">
                               <SelectValue placeholder="Select day" />
                             </SelectTrigger>
                             <SelectContent>
@@ -371,7 +371,7 @@ export default function Dashboard() {
               </Tabs>
             </div>
 
-            <aside className="space-y-6 min-w-0">
+            <aside className="min-w-0 space-y-4 sm:space-y-6">
               <PvUploadPanel
                 pvBusy={pvBusy}
                 pvPreview={pvPreview}
@@ -444,7 +444,7 @@ function PvUploadPanel({
   onClear: () => void;
 }) {
   return (
-    <section className="shadcn-card rounded-xl border bg-card p-5 space-y-4">
+    <section className="shadcn-card space-y-4 rounded-xl border bg-card p-3 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -473,7 +473,7 @@ function PvUploadPanel({
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
             <MiniMetric label="PV energy" value={pvComparison.kpi.generationKwh.toFixed(1)} unit="kWh" glossarySlug="pv-generation" />
             <MiniMetric label="Self-use" value={pvComparison.kpi.selfConsumptionKwh.toFixed(1)} unit="kWh" glossarySlug="self-consumption" />
             <MiniMetric label="Surplus" value={pvComparison.kpi.surplusKwh.toFixed(1)} unit="kWh" glossarySlug="surplus-energy" />
@@ -570,12 +570,12 @@ function EmptyState({
   onLoadSample: () => void;
 }) {
   return (
-    <main className="max-w-3xl mx-auto px-6 py-16 space-y-10">
+    <main className="mx-auto max-w-3xl space-y-8 px-3 py-10 sm:px-6 sm:py-16 sm:space-y-10">
       <div className="text-center space-y-3">
         <div className="inline-flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-2">
           <Activity className="size-7" />
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           Power Quality &amp; Load Analytics
         </h1>
         <p className="text-muted-foreground max-w-xl mx-auto">
@@ -631,7 +631,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
     kpi.thdAHighLoadMaxPct >= 25 ? "critical" : kpi.thdAHighLoadMaxPct >= 15 ? "warning" : "ok";
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+    <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-6">
       <KpiCard
         label="Peak demand"
         value={kpi.peakPowerKw.toFixed(1)}

@@ -192,8 +192,8 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col gap-2 min-[860px]:flex-row min-[860px]:items-center min-[860px]:justify-between">
+        <div className="flex flex-wrap items-center gap-1">
           <Button variant="outline" size="sm" onClick={handleZoomIn}>
             <ZoomIn className="size-4" />
           </Button>
@@ -204,10 +204,10 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
             <Maximize2 className="size-4 mr-1" />
             Fit
           </Button>
-          <span className="text-xs text-muted-foreground ml-3 font-mono">
+          <span className="ml-0 w-full pt-1 font-mono text-[11px] text-muted-foreground sm:ml-3 sm:w-auto sm:pt-0 sm:text-xs">
             {fmtTime(range[0], totalMs)} – {fmtTime(range[1], totalMs)}
           </span>
-          <span className="text-xs text-muted-foreground ml-2">
+          <span className="text-[11px] text-muted-foreground sm:ml-2 sm:text-xs">
             {filteredRows.length.toLocaleString()} pts → {sampledRows.length.toLocaleString()} drawn
           </span>
         </div>
@@ -223,12 +223,12 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
         </div>
       </div>
 
-      <div ref={chartRef} className="rounded-lg border border-card-border bg-card p-3">
-        <div className="h-[480px] w-full">
+      <div ref={chartRef} className="rounded-lg border border-card-border bg-card p-2 sm:p-3">
+        <div className="h-[340px] w-full sm:h-[420px] xl:h-[480px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={data}
-              margin={{ top: 10, right: 30, left: 10, bottom: 0 }}
+              margin={{ top: 10, right: 18, left: 0, bottom: 0 }}
               onMouseDown={(e) => {
                 if (e && e.activeLabel !== undefined) {
                   setDrag({ start: Number(e.activeLabel), end: Number(e.activeLabel) });
@@ -257,7 +257,7 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
                 tickFormatter={(v) => fmtTime(v, range[1] - range[0])}
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
-                minTickGap={60}
+                minTickGap={36}
               />
               {axisGroups.map((g) => (
                 <YAxis
@@ -266,7 +266,7 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
                   orientation={g.side}
                   stroke="hsl(var(--muted-foreground))"
                   fontSize={11}
-                  width={56}
+                  width={44}
                   label={{
                     value: g.unit,
                     angle: -90,
@@ -331,7 +331,7 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
         {chartSeries.map((s) => {
           const on = visible.has(s.key);
           return (
@@ -339,7 +339,7 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
               key={s.key}
               onClick={() => onToggleMetric(s.key)}
               className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium border transition-colors flex items-center gap-1.5 hover-elevate active-elevate-2",
+                "flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover-elevate active-elevate-2",
                 on
                   ? "bg-card border-card-border text-foreground"
                   : "bg-muted/50 border-transparent text-muted-foreground",

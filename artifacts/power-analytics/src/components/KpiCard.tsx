@@ -40,7 +40,7 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "shadcn-card rounded-xl border bg-card p-5 flex flex-col gap-3 min-w-0",
+        "shadcn-card flex min-w-0 flex-col gap-2 rounded-xl border bg-card p-3 sm:gap-3 sm:p-5",
         toneClasses[tone],
       )}
     >
@@ -58,10 +58,10 @@ export function KpiCard({
         )}
       </div>
       <div className="flex items-baseline gap-2 min-w-0">
-        <span className="text-3xl font-mono font-semibold tabular-nums tracking-tight truncate">
+        <span className="truncate font-mono text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">
           {value}
         </span>
-        {unit && <span className="text-sm text-muted-foreground">{unit}</span>}
+        {unit && <span className="shrink-0 text-xs text-muted-foreground sm:text-sm">{unit}</span>}
       </div>
       {(hint || delta) && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">

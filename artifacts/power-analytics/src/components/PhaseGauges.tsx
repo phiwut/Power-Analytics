@@ -61,7 +61,7 @@ export function PhaseGauges({ ds, result }: Props) {
         const tolMax = 230 * 1.1;
         const inTol = s.voltageMin >= tolMin && s.voltageMax <= tolMax;
         return (
-          <div key={s.phase} className="shadcn-card rounded-xl border bg-card p-5">
+          <div key={s.phase} className="shadcn-card rounded-xl border bg-card p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <span

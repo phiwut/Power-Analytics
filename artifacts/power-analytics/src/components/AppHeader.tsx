@@ -36,9 +36,9 @@ export function AppHeader({
   hideThemeToggle = false,
 }: Props) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
-      <div className="px-6 h-14 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-3 min-w-0">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-0">
+        <Link href="/" className="flex min-w-0 flex-1 items-center gap-3">
           <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
             <Activity className="size-4" />
           </div>
@@ -58,24 +58,24 @@ export function AppHeader({
           </div>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <Button size="sm" variant="outline" asChild>
             <Link href="/glossary">
-              <BookOpenText className="size-4 mr-1.5" />
-              Glossary
+              <BookOpenText className="size-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Glossary</span>
             </Link>
           </Button>
           {onLoadSample && !fileName && (
             <Button variant="outline" size="sm" onClick={onLoadSample}>
-              Load sample
+              Sample
             </Button>
           )}
           {fileName && onExportPdf && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="default">
-                  <Download className="size-4 mr-1.5" />
-                  Export
+                  <Download className="size-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
@@ -104,8 +104,8 @@ export function AppHeader({
               onClick={onAskChatGpt}
               title="Copy a compact analysis summary for ChatGPT."
             >
-              <MessageCircle className="size-4 mr-1.5" />
-              Ask ChatGPT
+              <MessageCircle className="size-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Ask ChatGPT</span>
             </Button>
           )}
           {!hideThemeToggle && (

@@ -228,10 +228,12 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric }:
                   color: "hsl(var(--popover-foreground))",
                 }}
                 labelFormatter={(v) => new Date(Number(v)).toLocaleString()}
-                formatter={(value: number, name: string) => {
-                  const series = visibleSeries.find((s) => s.key === name);
+                formatter={(value: number, name: string, item: { dataKey?: unknown }) => {
+                  const dataKey = typeof item.dataKey === "string" ? item.dataKey : undefined;
+                  const series = visibleSeries.find((s) => s.key === dataKey || s.label === name);
+                  const unit = series?.unit ? ` ${series.unit}` : "";
                   return [
-                    `${Number(value).toFixed(series?.unit === "" || series?.unit === "%" ? 2 : 2)}${series?.unit ? " " + series.unit : ""}`,
+                    `${Number(value).toFixed(2)}${unit}`,
                     series?.label ?? name,
                   ];
                 }}
@@ -299,4 +301,3 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric }:
     </div>
   );
 }
-

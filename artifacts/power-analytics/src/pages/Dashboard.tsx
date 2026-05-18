@@ -19,6 +19,7 @@ import {
 import { AppHeader } from "@/components/AppHeader";
 import { FileDropzone } from "@/components/FileDropzone";
 import { KpiCard } from "@/components/KpiCard";
+import { GlossaryTooltipLink } from "@/components/GlossaryTooltipLink";
 import { MainChart } from "@/components/MainChart";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { PhaseGauges } from "@/components/PhaseGauges";
@@ -473,10 +474,10 @@ function PvUploadPanel({
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <MiniMetric label="PV energy" value={pvComparison.kpi.generationKwh.toFixed(1)} unit="kWh" />
-            <MiniMetric label="Self-use" value={pvComparison.kpi.selfConsumptionKwh.toFixed(1)} unit="kWh" />
-            <MiniMetric label="Surplus" value={pvComparison.kpi.surplusKwh.toFixed(1)} unit="kWh" />
-            <MiniMetric label="Residual min" value={pvComparison.kpi.residualMinKw.toFixed(1)} unit="kW" />
+            <MiniMetric label="PV energy" value={pvComparison.kpi.generationKwh.toFixed(1)} unit="kWh" glossarySlug="pv-generation" />
+            <MiniMetric label="Self-use" value={pvComparison.kpi.selfConsumptionKwh.toFixed(1)} unit="kWh" glossarySlug="self-consumption" />
+            <MiniMetric label="Surplus" value={pvComparison.kpi.surplusKwh.toFixed(1)} unit="kWh" glossarySlug="surplus-energy" />
+            <MiniMetric label="Residual min" value={pvComparison.kpi.residualMinKw.toFixed(1)} unit="kW" glossarySlug="residual-load" />
           </div>
         </div>
       ) : pvPreview ? (
@@ -526,11 +527,22 @@ function PvUploadPanel({
   );
 }
 
-function MiniMetric({ label, value, unit }: { label: string; value: string; unit: string }) {
+function MiniMetric({
+  label,
+  value,
+  unit,
+  glossarySlug,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  glossarySlug?: string;
+}) {
   return (
     <div className="rounded-md border bg-background/40 p-2">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-        {label}
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        <span>{label}</span>
+        <GlossaryTooltipLink slug={glossarySlug} />
       </div>
       <div className="font-mono font-semibold tabular-nums">
         {value} <span className="text-xs text-muted-foreground">{unit}</span>
@@ -627,6 +639,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         hint={new Date(kpi.peakPowerAt).toLocaleString()}
         icon={TrendingUp}
         tone="default"
+        glossarySlug="peak-demand"
       />
       <KpiCard
         label="Avg load"
@@ -634,6 +647,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         unit="kW"
         hint={`import base ${kpi.baseLoadKw.toFixed(1)} kW`}
         icon={Gauge}
+        glossarySlug="average-load"
       />
       <KpiCard
         label="Energy"
@@ -641,6 +655,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         unit="kWh"
         hint={`${kpi.durationHours.toFixed(1)} h coverage`}
         icon={Zap}
+        glossarySlug="total-energy"
       />
       <KpiCard
         label="Voltage"
@@ -649,6 +664,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         hint={`${kpi.voltageMin.toFixed(0)}–${kpi.voltageMax.toFixed(0)} V`}
         icon={Plug}
         tone={voltageTone}
+        glossarySlug="voltage-band"
       />
       <KpiCard
         label="Power factor"
@@ -660,6 +676,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         }
         icon={Bolt}
         tone={pfTone}
+        glossarySlug="power-factor"
       />
       <KpiCard
         label="THD I load"
@@ -668,6 +685,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         hint={kpi.thdVAvailable ? `THD V ${kpi.thdVMaxPct.toFixed(1)}%` : "THD V n/a"}
         icon={Radio}
         tone={thdTone}
+        glossarySlug="thd-current"
       />
       <KpiCard
         label="Imbalance"
@@ -676,12 +694,14 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         hint={`avg ${kpi.imbalanceAvgPct.toFixed(2)}%`}
         icon={Activity}
         tone={imbTone}
+        glossarySlug="phase-imbalance"
       />
       <KpiCard
         label="Spikes"
         value={String(kpi.spikeCount)}
         hint={`peak/avg ${kpi.peakToAvg.toFixed(2)}×`}
         icon={Flame}
+        glossarySlug="load-spikes"
       />
       <KpiCard
         label="Frequency"
@@ -689,12 +709,14 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         unit="Hz"
         hint={`±${Math.max(Math.abs(kpi.frequencyMax - 50), Math.abs(kpi.frequencyMin - 50)).toFixed(2)}`}
         icon={Waves}
+        glossarySlug="frequency"
       />
       <KpiCard
         label="Sample interval"
         value={fmtInterval(kpi.intervalSeconds)}
         hint={`${kpi.totalRows.toLocaleString()} samples`}
         icon={Clock}
+        glossarySlug="sample-interval"
       />
       <KpiCard
         label="Battery rec"
@@ -702,6 +724,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         unit="kW/kWh"
         hint={`${result.battery.billingPeakReductionPct.toFixed(0)}% 15m ↓`}
         icon={Battery}
+        glossarySlug="battery-peak-shaving"
       />
       <KpiCard
         label="Neutral I"
@@ -709,6 +732,7 @@ function KpiRow({ result }: { result: AnalysisResult }) {
         unit="A"
         hint="max during window"
         icon={Activity}
+        glossarySlug="neutral-current"
       />
     </div>
   );

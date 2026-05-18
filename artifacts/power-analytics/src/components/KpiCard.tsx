@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { GlossaryTooltipLink } from "@/components/GlossaryTooltipLink";
 import type { LucideIcon } from "lucide-react";
 
 interface KpiCardProps {
@@ -9,6 +10,7 @@ interface KpiCardProps {
   icon?: LucideIcon;
   tone?: "default" | "ok" | "warning" | "critical";
   delta?: string;
+  glossarySlug?: string;
 }
 
 const toneClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
@@ -25,7 +27,16 @@ const iconBg: Record<NonNullable<KpiCardProps["tone"]>, string> = {
   critical: "bg-red-500/15 text-red-600 dark:text-red-400",
 };
 
-export function KpiCard({ label, value, unit, hint, icon: Icon, tone = "default", delta }: KpiCardProps) {
+export function KpiCard({
+  label,
+  value,
+  unit,
+  hint,
+  icon: Icon,
+  tone = "default",
+  delta,
+  glossarySlug,
+}: KpiCardProps) {
   return (
     <div
       className={cn(
@@ -34,9 +45,12 @@ export function KpiCard({ label, value, unit, hint, icon: Icon, tone = "default"
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground truncate">
-          {label}
-        </span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground truncate">
+            {label}
+          </span>
+          <GlossaryTooltipLink slug={glossarySlug} />
+        </div>
         {Icon && (
           <span className={cn("flex size-8 items-center justify-center rounded-lg", iconBg[tone])}>
             <Icon className="size-4" />

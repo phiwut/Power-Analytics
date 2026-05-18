@@ -1,4 +1,5 @@
-import { Activity, Moon, Sun, Download, FileJson, FileSpreadsheet, FileText, MessageCircle } from "lucide-react";
+import { Link } from "wouter";
+import { Activity, Moon, Sun, Download, FileJson, FileSpreadsheet, FileText, MessageCircle, BookOpenText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ interface Props {
   onToggleDark: () => void;
   onLoadSample?: () => void;
   onAskChatGpt?: () => void;
+  hideThemeToggle?: boolean;
 }
 
 export function AppHeader({
@@ -31,11 +33,12 @@ export function AppHeader({
   onToggleDark,
   onLoadSample,
   onAskChatGpt,
+  hideThemeToggle = false,
 }: Props) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="px-6 h-14 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
+        <Link href="/" className="flex items-center gap-3 min-w-0">
           <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
             <Activity className="size-4" />
           </div>
@@ -53,9 +56,15 @@ export function AppHeader({
               </p>
             )}
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/glossary">
+              <BookOpenText className="size-4 mr-1.5" />
+              Glossary
+            </Link>
+          </Button>
           {onLoadSample && !fileName && (
             <Button variant="outline" size="sm" onClick={onLoadSample}>
               Load sample
@@ -99,9 +108,11 @@ export function AppHeader({
               Ask ChatGPT
             </Button>
           )}
-          <Button size="sm" variant="ghost" onClick={onToggleDark}>
-            {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          </Button>
+          {!hideThemeToggle && (
+            <Button size="sm" variant="ghost" onClick={onToggleDark}>
+              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </Button>
+          )}
         </div>
       </div>
     </header>

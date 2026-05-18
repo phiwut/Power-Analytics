@@ -14,7 +14,6 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import {
   GLOSSARY_CATEGORY_LABELS,
-  GLOSSARY_TERMS,
   getGlossaryTerm,
   type GlossaryTerm,
 } from "@/lib/glossary";
@@ -29,6 +28,223 @@ const STATUS_CLASSES: Record<GlossaryTerm["examples"][number]["status"], string>
   good: "border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   watch: "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
   bad: "border-red-500/35 bg-red-500/10 text-red-700 dark:text-red-300",
+};
+
+interface TermPlaybook {
+  drivers: string[];
+  checks: string[];
+  actions: string[];
+  mistakes: string[];
+  inTool: string[];
+}
+
+const CATEGORY_PLAYBOOKS: Record<GlossaryTerm["category"], TermPlaybook> = {
+  load: {
+    drivers: [
+      "Operating hours, equipment sequencing, and the difference between active time and idle time.",
+      "Whether large loads start together or are spread more evenly across the day.",
+      "Data resolution: coarse intervals can smooth the exact behavior you are trying to understand.",
+    ],
+    checks: [
+      "Compare the metric against peak demand, average load, and base load instead of reading it alone.",
+      "Look for whether the issue is persistent or driven by a few narrow windows.",
+      "Check whether the pattern repeats by hour-of-day, shift, or day-type before changing operations.",
+    ],
+    actions: [
+      "Stagger heavy equipment starts, shorten idle runtime, and shut off avoidable always-on loads.",
+      "Use submetering or equipment schedules if one site-level number is not enough to isolate the driver.",
+      "If the issue is peak-related, test storage or operational buffering before investing in larger infrastructure.",
+    ],
+    mistakes: [
+      "Treating one high point as a complete story without comparing it to the average and the base profile.",
+      "Assuming the metric is operationally meaningful when the sample interval is too coarse to see the root cause.",
+      "Optimizing peaks while ignoring a base load that is quietly consuming energy all day.",
+    ],
+    inTool: [
+      "Use the time-series explorer first, then compare the KPI card against the hourly profile and spike table.",
+      "If the metric changes a lot when you zoom in, the site behavior is event-driven rather than structurally constant.",
+      "The battery recommendation is downstream of these load metrics, so read the load story before trusting the storage story.",
+    ],
+  },
+  quality: {
+    drivers: [
+      "Upstream grid quality, internal wiring conditions, and how evenly different phases are loaded.",
+      "Nonlinear equipment such as drives, UPS systems, LED supplies, and rectifier-based loads.",
+      "Whether the observed issue is constant or only appears under certain loading conditions.",
+    ],
+    checks: [
+      "Compare the metric against load level, because many quality issues become relevant only under meaningful current draw.",
+      "Use related metrics together: THD, neutral current, imbalance, and voltage stability often explain each other.",
+      "Look for repeatable windows rather than isolated samples, especially when deciding whether field investigation is justified.",
+    ],
+    actions: [
+      "Rebalance single-phase loads, review compensation settings, and inspect harmonic-heavy circuits first.",
+      "If the issue follows one feeder or panel, measure closer to the source instead of relying only on the main meter.",
+      "Treat persistent excursions as an engineering problem, not just a reporting anomaly.",
+    ],
+    mistakes: [
+      "Reading a dramatic percentage at tiny load and assuming it is automatically a serious site-wide issue.",
+      "Treating voltage, harmonics, and imbalance as separate problems when they often have a shared cause.",
+      "Ignoring duration and repetition: one weird sample is less important than a stable bad pattern.",
+    ],
+    inTool: [
+      "Read the KPI card, then open the phase view and the main chart to see whether the problem is one phase, all phases, or only certain hours.",
+      "If the metric worsens during peaks, the load mix is part of the story. If it is bad all the time, the network itself may be involved.",
+      "Use findings as prioritization, but verify critical power-quality issues with site engineering context before acting.",
+    ],
+  },
+  power: {
+    drivers: [
+      "Reactive loads, poor compensation, light loading conditions, and distorted current waveforms.",
+      "Whether the site is importing materially from the grid or exporting because of PV.",
+      "Changes in motor loading, capacitor bank behavior, or harmonic conditions.",
+    ],
+    checks: [
+      "Read power factor together with load level and THD rather than as a standalone score.",
+      "Confirm whether the bad value appears during meaningful import or only during tiny or negative net load.",
+      "Check if the issue is stable or only tied to a specific process state.",
+    ],
+    actions: [
+      "Review compensation tuning, avoid overcompensation, and inspect large inductive loads first.",
+      "If harmonics are high, solve waveform quality before assuming capacitor changes alone will fix the issue.",
+      "Use operating context: some low-PF moments are real problems, others are measurement artefacts of low-load periods.",
+    ],
+    mistakes: [
+      "Treating every low number equally even when the site is barely importing power.",
+      "Trying to fix power factor in isolation while harmonic distortion or PV export is driving the reading.",
+      "Assuming a good average means there are no expensive bad windows.",
+    ],
+    inTool: [
+      "Use zoom to see whether low power factor happens in the same windows as spikes or THD events.",
+      "If PF is weak while THD is clean, compensation is a stronger candidate. If both are poor, the load mix is probably involved.",
+      "Use the card as a screening metric, then inspect the chart to decide if it is operational or mostly cosmetic.",
+    ],
+  },
+  battery: {
+    drivers: [
+      "How tall the peaks are, how long they last, and how often they repeat in tariff-relevant windows.",
+      "The gap between average load and peak demand, which determines whether buffering has leverage.",
+      "Whether PV or operational flexibility already removes part of the peak before storage is added.",
+    ],
+    checks: [
+      "Compare recommended battery power and energy together; one without the other is misleading.",
+      "Check whether the site has sharp repeatable peaks or just a generally high flat demand profile.",
+      "Validate that the billing logic matches the tariff you actually care about, especially the 15-minute window.",
+    ],
+    actions: [
+      "Prioritize no-capex fixes first: sequencing, idle shutdowns, and operational staggering can shrink the battery need.",
+      "Use storage when the peak pattern is narrow, repetitive, and expensive relative to energy cost.",
+      "Re-check the case after adding PV context because residual load can materially change the storage story.",
+    ],
+    mistakes: [
+      "Reading the recommendation as a guaranteed economic answer instead of a technical starting point.",
+      "Ignoring flat base demand and trying to solve an all-day inefficiency with a battery.",
+      "Sizing only for the single highest point without considering repeatability and usable dispatch windows.",
+    ],
+    inTool: [
+      "Read battery recommendation after understanding peak demand, spike count, and the hourly profile.",
+      "If PV overlay is active, compare residual load before treating the original peak as the final storage target.",
+      "Use zoom to confirm whether the peak is a narrow dispatch problem or a long-duration energy problem.",
+    ],
+  },
+  pv: {
+    drivers: [
+      "Timing overlap between PV production and site load matters more than headline generation alone.",
+      "Coverage quality, data gaps, and alignment tolerance affect how much of the PV story is visible.",
+      "Storage, export tariff, and shift timing change whether surplus is good, neutral, or a problem.",
+    ],
+    checks: [
+      "Check overlap coverage before trusting any PV-derived KPI too strongly.",
+      "Read generation, self-consumption, surplus, and residual load together because each one explains the others.",
+      "Look for whether mismatch happens every day or only under certain operating or weather patterns.",
+    ],
+    actions: [
+      "Shift flexible loads into solar windows before investing in more PV or storage.",
+      "Use storage when self-consumption is low but there is valuable later demand to capture.",
+      "If coverage is weak or data quality is poor, improve the PV feed before making economic decisions from it.",
+    ],
+    mistakes: [
+      "Optimizing for maximum PV generation while ignoring whether the site can actually use it.",
+      "Treating analytical overlap numbers as billing-grade settlement values without verifying metering boundaries.",
+      "Assuming negative residual load is bad when it may simply reflect intentional export.",
+    ],
+    inTool: [
+      "Use the overlay in the main chart to see whether PV trims the same hours that drive cost or only creates midday surplus.",
+      "Read PV KPIs only after the alignment review step confirms overlap and data quality.",
+      "Residual load is the fastest way to understand whether solar actually changes grid dependency in useful hours.",
+    ],
+  },
+};
+
+const TERM_PLAYBOOK_OVERRIDES: Partial<Record<GlossaryTerm["slug"], Partial<TermPlaybook>>> = {
+  "peak-demand": {
+    drivers: [
+      "Large equipment starts, simultaneous process ramps, and short operational overlaps that happen in the same billing window.",
+      "Temporary events can dominate the bill even when the rest of the day looks calm.",
+      "The sampled peak may be operationally real or partially smoothed depending on the interval length.",
+    ],
+    actions: [
+      "Separate startup events where possible and avoid stacking multiple heavy loads into the same short interval.",
+      "Check whether the highest peak is operationally necessary or just a scheduling habit.",
+      "If the peak is narrow and repeatable, storage or controlled ramping usually has the strongest leverage.",
+    ],
+  },
+  "base-load": {
+    actions: [
+      "Audit night and weekend load first because that is where base-load waste is easiest to expose.",
+      "Prioritize HVAC schedules, standby equipment, pumps, and compressed-air support loads.",
+      "Base-load work compounds every hour of the year, so even small reductions are durable savings.",
+    ],
+  },
+  "power-factor": {
+    checks: [
+      "Confirm whether the weak value occurs during real import load; low-load PF can be noisy and less actionable.",
+      "Compare PF windows with THD and PV behavior before changing compensation settings.",
+      "If PF collapses only during one process step, the culprit is usually local and identifiable.",
+    ],
+  },
+  "thd-current": {
+    actions: [
+      "Start with drives, UPS systems, chargers, and dense electronics panels rather than treating the whole site equally.",
+      "Check whether the distortion coincides with rising neutral current or voltage THD, because that changes urgency.",
+      "If the issue is limited to one branch, solve it near the source instead of applying broad site-level fixes.",
+    ],
+  },
+  "phase-imbalance": {
+    actions: [
+      "Map single-phase circuits to phases and rebalance the biggest recurring contributors first.",
+      "If imbalance shows up only during certain shifts, the issue is usually operational rather than structural.",
+      "Treat motor-heavy assets with extra caution because small voltage imbalance can create much larger current stress.",
+    ],
+  },
+  "sample-interval": {
+    mistakes: [
+      "Comparing datasets with very different intervals as if they had the same diagnostic quality.",
+      "Assuming missing spikes mean the site is calm when the interval may simply be averaging them away.",
+      "Trusting a storage or spike conclusion without checking whether the underlying resolution was sufficient.",
+    ],
+  },
+  "battery-peak-shaving": {
+    checks: [
+      "Ask whether the 15-minute demand charge is actually a material economic driver for the site.",
+      "Validate whether the biggest peaks are repeatable enough to justify dispatch logic and cycling.",
+      "Check residual load if PV is present, because solar may already reduce the battery power requirement materially.",
+    ],
+  },
+  "pv-generation": {
+    mistakes: [
+      "Equating high production with high value without looking at overlap, export, and site demand timing.",
+      "Assuming the PV number covers the full monitoring period when overlap coverage may be partial.",
+      "Ignoring clipped, normalized, or aligned data notes during the upload review step.",
+    ],
+  },
+  "residual-load": {
+    checks: [
+      "Look for whether residual load drops in the hours that actually matter for tariff exposure or generator sizing.",
+      "Separate helpful daytime shaving from deep negative export windows; they are different operational outcomes.",
+      "If residual load barely changes, the PV timing story matters more than the PV size story.",
+    ],
+  },
 };
 
 export default function GlossaryTermPage({ slug }: { slug: string }) {
@@ -69,6 +285,8 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
         .filter((value): value is GlossaryTerm => Boolean(value)),
     [term],
   );
+  const playbook = useMemo(() => (term ? getPlaybook(term) : null), [term]);
+  const interpretationRows = useMemo(() => (term ? buildInterpretationRows(term) : []), [term]);
 
   if (!term) {
     return (
@@ -93,6 +311,8 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
       </div>
     );
   }
+
+  if (!playbook) return null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -138,15 +358,15 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
           <div className="rounded-2xl border border-card-border bg-card p-6">
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Definition
-                </div>
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  What is {term.title}?
+                </h2>
                 <p className="mt-3 text-sm leading-7">{term.definition}</p>
               </div>
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Why it matters
-                </div>
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Why {term.title} matters
+                </h2>
                 <p className="mt-3 text-sm leading-7">{term.whyItMatters}</p>
               </div>
             </div>
@@ -160,6 +380,33 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
               <Callout title="Good" body={term.goodExample} tone="good" />
               <Callout title="Bad" body={term.badExample} tone="bad" />
             </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-card-border bg-card p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Interpretation guide
+              </div>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+                How to interpret {term.title.toLowerCase()} quickly.
+              </h2>
+            </div>
+            <div className="max-w-xl text-sm leading-6 text-muted-foreground">
+              Read the number in context, not in isolation. The examples below show what healthy,
+              borderline, and clearly problematic behavior looks like in practice.
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            {interpretationRows.map((row) => (
+              <div key={row.label} className={`rounded-xl border p-4 ${STATUS_CLASSES[row.status]}`}>
+                <div className="text-[11px] font-semibold uppercase tracking-wider">{row.label}</div>
+                <div className="mt-2 text-lg font-semibold tracking-tight">{row.value}</div>
+                <p className="mt-2 text-sm leading-6 text-current/85">{row.body}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -274,11 +521,42 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
           </div>
         </section>
 
+        <section className="grid gap-6 xl:grid-cols-3">
+          <ContentListCard
+            title="What usually drives this metric"
+            body={`These are the main conditions that tend to move ${term.title.toLowerCase()} up or down.`}
+            items={playbook.drivers}
+          />
+          <ContentListCard
+            title="What to check next"
+            body="Use these checks before jumping to a conclusion or a fix."
+            items={playbook.checks}
+          />
+          <ContentListCard
+            title="What usually improves it"
+            body={`These are the highest-leverage actions when ${term.title.toLowerCase()} is genuinely weak.`}
+            items={playbook.actions}
+          />
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+          <ContentListCard
+            title="How to use this metric inside Power Analytics"
+            body="This is the shortest route from the glossary page back to the actual workflow in the tool."
+            items={playbook.inTool}
+          />
+          <ContentListCard
+            title="Common interpretation mistakes"
+            body="These are the errors that most often make a metric look more certain than it really is."
+            items={playbook.mistakes}
+          />
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="rounded-2xl border border-card-border bg-card p-6">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               FAQ
-            </div>
+            </h2>
             <div className="mt-4 divide-y divide-border">
               {term.faq.map((item) => (
                 <div key={item.question} className="py-4 first:pt-0 last:pb-0">
@@ -290,9 +568,9 @@ export default function GlossaryTermPage({ slug }: { slug: string }) {
           </div>
 
           <div className="rounded-2xl border border-card-border bg-card p-6">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Related terms
-            </div>
+            </h2>
             <div className="mt-4 space-y-3">
               {relatedTerms.map((related) => (
                 <Link
@@ -371,6 +649,30 @@ function statusStroke(status: GlossaryTerm["examples"][number]["status"]) {
   }
 }
 
+function ContentListCard({
+  title,
+  body,
+  items,
+}: {
+  title: string;
+  body: string;
+  items: string[];
+}) {
+  return (
+    <section className="rounded-2xl border border-card-border bg-card p-6">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{body}</p>
+      <ul className="mt-4 space-y-3">
+        {items.map((item) => (
+          <li key={item} className="rounded-xl border border-border bg-background/70 px-4 py-3 text-sm leading-6">
+            {item}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function statusFill(status: GlossaryTerm["examples"][number]["status"]) {
   switch (status) {
     case "good":
@@ -386,6 +688,13 @@ function buildStructuredData(term: GlossaryTerm) {
   return {
     "@context": "https://schema.org",
     "@graph": [
+      {
+        "@type": "Article",
+        headline: `${term.title} explained`,
+        description: term.summary,
+        articleSection: GLOSSARY_CATEGORY_LABELS[term.category],
+        about: term.title,
+      },
       {
         "@type": "DefinedTerm",
         name: term.title,
@@ -406,4 +715,42 @@ function buildStructuredData(term: GlossaryTerm) {
       },
     ],
   };
+}
+
+function getPlaybook(term: GlossaryTerm): TermPlaybook {
+  const base = CATEGORY_PLAYBOOKS[term.category];
+  const override = TERM_PLAYBOOK_OVERRIDES[term.slug] ?? {};
+
+  return {
+    drivers: override.drivers ?? base.drivers,
+    checks: override.checks ?? base.checks,
+    actions: override.actions ?? base.actions,
+    mistakes: override.mistakes ?? base.mistakes,
+    inTool: override.inTool ?? base.inTool,
+  };
+}
+
+function buildInterpretationRows(term: GlossaryTerm) {
+  const [good, watch, bad] = term.examples;
+
+  return [
+    {
+      label: "Healthy signal",
+      status: good.status,
+      value: good.value,
+      body: `${good.explanation} This is the kind of reading that matches the plain-language definition of the metric without creating obvious operational tension.`,
+    },
+    {
+      label: "Borderline signal",
+      status: watch.status,
+      value: watch.value,
+      body: `${watch.explanation} This is the zone where the metric becomes useful as an investigation cue, even if it does not yet prove a problem on its own.`,
+    },
+    {
+      label: "Clearly weak signal",
+      status: bad.status,
+      value: bad.value,
+      body: `${bad.explanation} When the dashboard looks like this repeatedly, the metric is no longer just descriptive. It is pointing toward a real technical or economic issue.`,
+    },
+  ] as const;
 }

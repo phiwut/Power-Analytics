@@ -12,6 +12,9 @@ import {
   Waves,
   Zap,
   AlertTriangle,
+  CheckCircle2,
+  Sun,
+  X,
 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { FileDropzone } from "@/components/FileDropzone";
@@ -47,6 +50,20 @@ import {
 import { exportFindingsCsv, exportFindingsJson, exportPdfReport } from "@/lib/export";
 import { buildChatGptPrompt } from "@/lib/chatgptPrompt";
 import { ChatGptPromptModal } from "@/components/ChatGptPromptModal";
+import {
+  alignPvToMeasurement,
+  analysePvComparison,
+  parsePvFile,
+  type AlignedPvDataset,
+  type ParsedPvDataset,
+  type PvComparisonResult,
+} from "@/lib/pv";
+
+interface PvPreview {
+  parsed: ParsedPvDataset;
+  aligned: AlignedPvDataset;
+  comparison: PvComparisonResult;
+}
 
 export default function Dashboard() {
   const [ds, setDs] = useState<ParsedDataset | null>(null);
@@ -65,6 +82,9 @@ export default function Dashboard() {
   const [chatPrompt, setChatPrompt] = useState("");
   const [chatTruncated, setChatTruncated] = useState(false);
   const [chatBuilding, setChatBuilding] = useState(false);
+  const [pvBusy, setPvBusy] = useState(false);
+  const [pvPreview, setPvPreview] = useState<PvPreview | null>(null);
+  const [pvComparison, setPvComparison] = useState<PvComparisonResult | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -72,6 +92,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     setSelectedProfileDay("all");
+    setPvPreview(null);
+    setPvComparison(null);
   }, [ds?.startTime, ds?.endTime]);
 
   const result: AnalysisResult | null = useMemo(() => {
@@ -96,12 +118,18 @@ export default function Dashboard() {
     );
   }, [result, selectedProfileDay]);
 
+  const allInsights = useMemo(() => {
+    if (!result) return [];
+    return pvComparison ? [...pvComparison.insights, ...result.insights] : result.insights;
+  }, [result, pvComparison]);
+
   const onFile = useCallback(async (file: File) => {
     setBusy(true);
     try {
       const parsed = await parseFile(file);
       setDs(parsed);
       setRange([parsed.startTime, parsed.endTime]);
+      setVisible(new Set(METRIC_SERIES.filter((s) => s.enabledByDefault).map((s) => s.key)));
       if (parsed.warnings.length) {
         toast({
           title: "Loaded with notes",
@@ -124,6 +152,52 @@ export default function Dashboard() {
     }
   }, []);
 
+  const onPvFile = useCallback(async (file: File) => {
+    if (!ds) return;
+    setPvBusy(true);
+    try {
+      const parsed = await parsePvFile(file);
+      const aligned = alignPvToMeasurement(parsed, ds);
+      const comparison = analysePvComparison(ds, aligned);
+      setPvPreview({ parsed, aligned, comparison });
+      toast({
+        title: "PV data ready to review",
+        description: `${aligned.rowCount.toLocaleString()} rows overlap the measurement range.`,
+      });
+    } catch (e) {
+      setPvPreview(null);
+      toast({
+        title: "Could not parse PV file",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    } finally {
+      setPvBusy(false);
+    }
+  }, [ds]);
+
+  const confirmPvPreview = useCallback(() => {
+    if (!pvPreview) return;
+    setPvComparison(pvPreview.comparison);
+    setPvPreview(null);
+    setVisible((prev) => new Set([...prev, "pv_generation", "residual_load"]));
+    toast({
+      title: "PV data added",
+      description: "PV generation and residual load are now available in the chart.",
+    });
+  }, [pvPreview]);
+
+  const clearPvData = useCallback(() => {
+    setPvPreview(null);
+    setPvComparison(null);
+    setVisible((prev) => {
+      const next = new Set(prev);
+      next.delete("pv_generation");
+      next.delete("residual_load");
+      return next;
+    });
+  }, []);
+
   const loadSample = useCallback(async () => {
     setBusy(true);
     try {
@@ -135,6 +209,7 @@ export default function Dashboard() {
       const parsed = await parseFile(file);
       setDs(parsed);
       setRange([parsed.startTime, parsed.endTime]);
+      setVisible(new Set(METRIC_SERIES.filter((s) => s.enabledByDefault).map((s) => s.key)));
       toast({
         title: `Loaded sample (${parsed.rowCount.toLocaleString()} rows)`,
       });
@@ -195,8 +270,8 @@ export default function Dashboard() {
         fileName={ds?.fileName}
         rowCount={ds?.rowCount}
         onExportPdf={ds && result ? () => exportPdfReport(result, ds) : undefined}
-        onExportCsv={ds && result ? () => exportFindingsCsv(result, ds) : undefined}
-        onExportJson={ds && result ? () => exportFindingsJson(result, ds) : undefined}
+        onExportCsv={ds && result ? () => exportFindingsCsv(result, ds, pvComparison ?? undefined) : undefined}
+        onExportJson={ds && result ? () => exportFindingsJson(result, ds, pvComparison ?? undefined) : undefined}
         dark={dark}
         onToggleDark={() => setDark((d) => !d)}
         onLoadSample={loadSample}
@@ -239,6 +314,7 @@ export default function Dashboard() {
                   onRangeChange={setRange}
                   visible={visible}
                   onToggleMetric={toggleMetric}
+                  pvComparison={pvComparison}
                 />
               </section>
 
@@ -295,14 +371,24 @@ export default function Dashboard() {
             </div>
 
             <aside className="space-y-6 min-w-0">
+              <PvUploadPanel
+                pvBusy={pvBusy}
+                pvPreview={pvPreview}
+                pvComparison={pvComparison}
+                onPvFile={onPvFile}
+                onConfirm={confirmPvPreview}
+                onCancel={() => setPvPreview(null)}
+                onClear={clearPvData}
+              />
+
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-semibold tracking-tight">Findings</h2>
                   <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    {result.insights.length} item{result.insights.length === 1 ? "" : "s"}
+                    {allInsights.length} item{allInsights.length === 1 ? "" : "s"}
                   </span>
                 </div>
-                <InsightsPanel insights={result.insights} />
+                <InsightsPanel insights={allInsights} />
               </section>
 
               <FileDropzone onFile={onFile} busy={busy} compact />
@@ -335,6 +421,129 @@ export default function Dashboard() {
         truncated={chatTruncated}
         building={chatBuilding}
       />
+    </div>
+  );
+}
+
+function PvUploadPanel({
+  pvBusy,
+  pvPreview,
+  pvComparison,
+  onPvFile,
+  onConfirm,
+  onCancel,
+  onClear,
+}: {
+  pvBusy: boolean;
+  pvPreview: PvPreview | null;
+  pvComparison: PvComparisonResult | null;
+  onPvFile: (file: File) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <section className="shadcn-card rounded-xl border bg-card p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Sun className="size-4 text-amber-500" />
+            <h2 className="font-semibold tracking-tight">PV data</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Add PV generation as a separate time series for overlay and residual-load comparison.
+          </p>
+        </div>
+        {pvComparison && (
+          <Button variant="ghost" size="sm" onClick={onClear}>
+            <X className="size-4" />
+          </Button>
+        )}
+      </div>
+
+      {pvComparison ? (
+        <div className="space-y-3 text-sm">
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 flex gap-2">
+            <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-semibold">PV overlay active</div>
+              <div className="text-xs text-muted-foreground">
+                {pvComparison.aligned.fileName} · {pvComparison.aligned.coveragePct.toFixed(1)}% coverage
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <MiniMetric label="PV energy" value={pvComparison.kpi.generationKwh.toFixed(1)} unit="kWh" />
+            <MiniMetric label="Self-use" value={pvComparison.kpi.selfConsumptionKwh.toFixed(1)} unit="kWh" />
+            <MiniMetric label="Surplus" value={pvComparison.kpi.surplusKwh.toFixed(1)} unit="kWh" />
+            <MiniMetric label="Residual min" value={pvComparison.kpi.residualMinKw.toFixed(1)} unit="kW" />
+          </div>
+        </div>
+      ) : pvPreview ? (
+        <div className="space-y-3">
+          <div className="rounded-lg border bg-background/40 p-3 space-y-2 text-sm">
+            <div className="font-semibold">Review detected PV mapping</div>
+            <PreviewRow label="File" value={pvPreview.aligned.fileName} />
+            <PreviewRow label="Timestamp" value={pvPreview.aligned.timestampColumn} />
+            <PreviewRow label="PV column" value={pvPreview.aligned.valueColumn} />
+            <PreviewRow label="Unit" value={`${pvPreview.aligned.detectedUnit} · ${pvPreview.aligned.detectedKind}`} />
+            <PreviewRow label="Confidence" value={pvPreview.aligned.mappingConfidence} />
+            <PreviewRow label="Rows in range" value={pvPreview.aligned.rowCount.toLocaleString()} />
+            <PreviewRow label="Overlap" value={`${pvPreview.aligned.coveragePct.toFixed(1)}%`} />
+            <PreviewRow label="Gaps" value={String(pvPreview.aligned.gapCount)} />
+            <PreviewRow label="Clipped negatives" value={String(pvPreview.aligned.clippedNegativeCount)} />
+          </div>
+          {pvPreview.aligned.warnings.length > 0 && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+              <div className="font-semibold text-amber-700 dark:text-amber-300 mb-1">PV notes</div>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {pvPreview.aligned.warnings.slice(0, 4).map((warning, index) => (
+                  <li key={index}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={onConfirm}>
+              Use PV data
+            </Button>
+            <Button size="sm" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <FileDropzone
+          onFile={onPvFile}
+          busy={pvBusy}
+          compact
+          compactTitle="Add PV data"
+          title="Drop a PV generation file"
+          description="Supports CSV, TXT and TSV files with timestamps and PV power or energy values."
+        />
+      )}
+    </section>
+  );
+}
+
+function MiniMetric({ label, value, unit }: { label: string; value: string; unit: string }) {
+  return (
+    <div className="rounded-md border bg-background/40 p-2">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        {label}
+      </div>
+      <div className="font-mono font-semibold tabular-nums">
+        {value} <span className="text-xs text-muted-foreground">{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+function PreviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-xs font-mono text-right truncate">{value}</span>
     </div>
   );
 }

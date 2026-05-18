@@ -6,9 +6,19 @@ interface FileDropzoneProps {
   onFile: (file: File) => void;
   busy?: boolean;
   compact?: boolean;
+  title?: string;
+  compactTitle?: string;
+  description?: string;
 }
 
-export function FileDropzone({ onFile, busy, compact }: FileDropzoneProps) {
+export function FileDropzone({
+  onFile,
+  busy,
+  compact,
+  title = "Drop a measurement file",
+  compactTitle = "Load a different file",
+  description = "Supports TXT and CSV exports from power quality analyzers, energy meters and data loggers. Tab, semicolon and comma separators detected automatically. German and English number formats supported.",
+}: FileDropzoneProps) {
   const [over, setOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,12 +74,11 @@ export function FileDropzone({ onFile, busy, compact }: FileDropzoneProps) {
         </div>
         <div className={cn(compact ? "" : "space-y-2")}>
           <h3 className={cn("font-semibold", compact ? "text-sm" : "text-lg")}>
-            {busy ? "Parsing file…" : compact ? "Load a different file" : "Drop a measurement file"}
+            {busy ? "Parsing file…" : compact ? compactTitle : title}
           </h3>
           {!compact && (
             <p className="text-sm text-muted-foreground max-w-md">
-              Supports TXT and CSV exports from power quality analyzers, energy meters and data loggers.
-              Tab, semicolon and comma separators detected automatically. German and English number formats supported.
+              {description}
             </p>
           )}
         </div>

@@ -55,6 +55,7 @@ export interface Insight {
     | "frequency"
     | "load"
     | "battery"
+    | "pv"
     | "summary";
   title: string;
   detail: string;

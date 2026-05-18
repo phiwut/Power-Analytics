@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize2, Download, Image as ImageIcon } from "lucide-react";
 import type { ParsedDataset } from "@/lib/parser";
 import { METRIC_SERIES, downsample } from "@/lib/analysis";
+import type { PvComparisonResult } from "@/lib/pv";
 import { cn } from "@/lib/utils";
 import { captureChartPng, downloadCsv } from "@/lib/export";
 
@@ -23,6 +24,7 @@ interface Props {
   onRangeChange: (r: [number, number]) => void;
   visible: Set<string>;
   onToggleMetric: (key: string) => void;
+  pvComparison?: PvComparisonResult | null;
 }
 
 const MAX_POINTS = 1500;
@@ -45,14 +47,56 @@ interface DualAxisGroup {
   domain: [number | "auto", number | "auto"];
 }
 
-export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric }: Props) {
+interface ChartSeries {
+  key: string;
+  label: string;
+  unit: string;
+  color: string;
+  getValue?: (r: ParsedDataset["rows"][number]) => number | undefined;
+}
+
+const PV_SERIES: ChartSeries[] = [
+  {
+    key: "pv_generation",
+    label: "PV generation",
+    unit: "kW",
+    color: "#f59e0b",
+  },
+  {
+    key: "residual_load",
+    label: "Residual load estimate",
+    unit: "kW",
+    color: "#06b6d4",
+  },
+];
+
+export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, pvComparison }: Props) {
   const chartRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ start: number; end: number } | null>(null);
 
-  const visibleSeries = useMemo(
-    () => METRIC_SERIES.filter((s) => visible.has(s.key)),
-    [visible],
+  const chartSeries = useMemo<ChartSeries[]>(
+    () => [
+      ...METRIC_SERIES,
+      ...(pvComparison ? PV_SERIES : []),
+    ],
+    [pvComparison],
   );
+
+  const visibleSeries = useMemo(
+    () => chartSeries.filter((s) => visible.has(s.key)),
+    [chartSeries, visible],
+  );
+
+  const pvPointByTimestamp = useMemo(() => {
+    const map = new Map<number, { generationKw: number; residualLoadKw: number }>();
+    for (const point of pvComparison?.points ?? []) {
+      map.set(point.timestamp, {
+        generationKw: point.generationKw,
+        residualLoadKw: point.residualLoadKw,
+      });
+    }
+    return map;
+  }, [pvComparison]);
 
   const filteredRows = useMemo(() => {
     return ds.rows.filter((r) => r.timestamp >= range[0] && r.timestamp <= range[1]);
@@ -67,14 +111,20 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric }:
     return sampledRows.map((r) => {
       const point: Record<string, number | string> = { t: r.timestamp };
       for (const s of visibleSeries) {
-        const v = s.getValue(r);
+        const pvPoint = pvPointByTimestamp.get(r.timestamp);
+        const v =
+          s.key === "pv_generation"
+            ? pvPoint?.generationKw
+            : s.key === "residual_load"
+              ? pvPoint?.residualLoadKw
+              : s.getValue?.(r);
         if (v !== undefined && !isNaN(v)) {
           point[s.key] = v;
         }
       }
       return point;
     });
-  }, [sampledRows, visibleSeries]);
+  }, [sampledRows, visibleSeries, pvPointByTimestamp]);
 
   // Build axis groups by unit
   const axisGroups = useMemo<DualAxisGroup[]>(() => {
@@ -127,7 +177,13 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric }:
       new Date(r.timestamp).toISOString(),
       String(r.timestamp),
       ...visibleSeries.map((s) => {
-        const v = s.getValue(r);
+        const pvPoint = pvPointByTimestamp.get(r.timestamp);
+        const v =
+          s.key === "pv_generation"
+            ? pvPoint?.generationKw
+            : s.key === "residual_load"
+              ? pvPoint?.residualLoadKw
+              : s.getValue?.(r);
         return v === undefined ? "" : String(v);
       }),
     ]);
@@ -276,7 +332,7 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric }:
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        {METRIC_SERIES.map((s) => {
+        {chartSeries.map((s) => {
           const on = visible.has(s.key);
           return (
             <button

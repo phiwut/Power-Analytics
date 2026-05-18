@@ -33,7 +33,7 @@ const TIMESTAMP_FORMATS = [
   /^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/,
 ];
 
-function detectDelimiter(sample: string): string {
+export function detectDelimiter(sample: string): string {
   const lines = sample.split(/\r?\n/).slice(0, 8).filter((l) => l.trim());
   if (lines.length === 0) return ",";
   const candidates = ["\t", ";", ",", "|"];
@@ -54,9 +54,9 @@ function detectDelimiter(sample: string): string {
   return best;
 }
 
-type DecimalMode = "auto" | "dot" | "comma";
+export type DecimalMode = "auto" | "dot" | "comma";
 
-function parseNumber(raw: string, mode: DecimalMode = "auto"): number | null {
+export function parseNumber(raw: string, mode: DecimalMode = "auto"): number | null {
   if (raw === undefined || raw === null) return null;
   const s = String(raw).trim();
   if (s === "" || s === "-" || s.toLowerCase() === "nan") return null;
@@ -94,7 +94,7 @@ function parseNumber(raw: string, mode: DecimalMode = "auto"): number | null {
   return isNaN(n) ? null : n;
 }
 
-function detectDecimalMode(rows: string[][], headers: string[]): DecimalMode {
+export function detectDecimalMode(rows: string[][], headers: string[]): DecimalMode {
   // Sample a chunk of cells (skip first column likely date)
   const startCol = headers.length > 1 ? 1 : 0;
   let commaCount = 0;
@@ -127,7 +127,7 @@ function detectDecimalMode(rows: string[][], headers: string[]): DecimalMode {
   return "auto";
 }
 
-function parseDate(d: string, t: string): number | null {
+export function parseDate(d: string, t: string): number | null {
   if (!d) return null;
   const dStr = d.trim();
   const tStr = (t || "00:00:00").trim();
@@ -173,7 +173,7 @@ function parseDate(d: string, t: string): number | null {
   return new Date(year, month - 1, day, hh, mm, ss, ms).getTime();
 }
 
-function parseSingleTimestamp(s: string): number | null {
+export function parseSingleTimestamp(s: string): number | null {
   if (!s) return null;
   const str = s.trim();
   // Try ISO

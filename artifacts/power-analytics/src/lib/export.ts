@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { AnalysisResult } from "./analysis";
 import type { ParsedDataset } from "./parser";
+import type { PvComparisonResult } from "./pv";
 
 export function downloadCsv(filename: string, rows: string[][]) {
   const csv = rows
@@ -40,10 +41,14 @@ export function downloadJson(filename: string, data: unknown) {
   URL.revokeObjectURL(url);
 }
 
-export function exportFindingsCsv(result: AnalysisResult, ds: ParsedDataset) {
+export function exportFindingsCsv(
+  result: AnalysisResult,
+  ds: ParsedDataset,
+  pv?: PvComparisonResult,
+) {
   const rows: string[][] = [
     ["Severity", "Category", "Title", "Detail"],
-    ...result.insights.map((i) => [i.severity, i.category, i.title, i.detail]),
+    ...(pv ? pv.insights : []).concat(result.insights).map((i) => [i.severity, i.category, i.title, i.detail]),
     [],
     ["KPI", "Value", "Unit"],
     ["Average Power", result.kpi.avgPowerKw.toFixed(2), "kW"],
@@ -69,10 +74,26 @@ export function exportFindingsCsv(result: AnalysisResult, ds: ParsedDataset) {
     ["15-Min Demand Reduction", result.battery.billingPeakReductionPct.toFixed(1), "%"],
     ["Raw Peak Reduction", result.battery.rawPeakReductionPct.toFixed(1), "%"],
   ];
+  if (pv) {
+    rows.push(
+      [],
+      ["PV KPI", "Value", "Unit"],
+      ["PV Generation", pv.kpi.generationKwh.toFixed(2), "kWh"],
+      ["PV Coverage", pv.kpi.coveragePct.toFixed(1), "%"],
+      ["PV Self-Consumption Potential", pv.kpi.selfConsumptionKwh.toFixed(2), "kWh"],
+      ["PV Surplus Potential", pv.kpi.surplusKwh.toFixed(2), "kWh"],
+      ["Residual Load Min", pv.kpi.residualMinKw.toFixed(2), "kW"],
+      ["Residual Load Max", pv.kpi.residualMaxKw.toFixed(2), "kW"],
+    );
+  }
   downloadCsv(`${stripExt(ds.fileName)}-findings.csv`, rows);
 }
 
-export function exportFindingsJson(result: AnalysisResult, ds: ParsedDataset) {
+export function exportFindingsJson(
+  result: AnalysisResult,
+  ds: ParsedDataset,
+  pv?: PvComparisonResult,
+) {
   downloadJson(`${stripExt(ds.fileName)}-findings.json`, {
     file: ds.fileName,
     rowCount: ds.rowCount,
@@ -80,10 +101,22 @@ export function exportFindingsJson(result: AnalysisResult, ds: ParsedDataset) {
     startTime: new Date(ds.startTime).toISOString(),
     endTime: new Date(ds.endTime).toISOString(),
     kpi: result.kpi,
-    insights: result.insights,
+    insights: pv ? pv.insights.concat(result.insights) : result.insights,
     battery: result.battery,
     spikes: result.spikes,
     hourlyProfile: result.hourlyProfile,
+    pv: pv
+      ? {
+          file: pv.aligned.fileName,
+          rowCount: pv.aligned.rowCount,
+          intervalSeconds: pv.aligned.intervalSeconds,
+          startTime: new Date(pv.aligned.startTime).toISOString(),
+          endTime: new Date(pv.aligned.endTime).toISOString(),
+          coveragePct: pv.aligned.coveragePct,
+          kpi: pv.kpi,
+          insights: pv.insights,
+        }
+      : null,
   });
 }
 

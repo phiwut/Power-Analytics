@@ -28,6 +28,7 @@ interface Props {
 }
 
 const MAX_POINTS = 1500;
+const FREQUENCY_AXIS_DOMAIN: [number, number] = [48, 52];
 
 function fmtTime(ts: number, totalMs: number): string {
   const d = new Date(ts);
@@ -133,7 +134,7 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
       yAxisId: u,
       unit: u === "_" ? "" : u,
       side: idx === 0 ? "left" : "right",
-      domain: ["auto", "auto"],
+      domain: u === "Hz" ? FREQUENCY_AXIS_DOMAIN : ["auto", "auto"],
     }));
   }, [visibleSeries]);
 
@@ -267,6 +268,7 @@ export function MainChart({ ds, range, onRangeChange, visible, onToggleMetric, p
                   stroke="hsl(var(--muted-foreground))"
                   fontSize={11}
                   width={44}
+                  domain={g.domain}
                   label={{
                     value: g.unit,
                     angle: -90,
